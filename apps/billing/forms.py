@@ -16,6 +16,13 @@ class ChargeForm(StyledFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["patient"].required = False
         self.fields["examination"].required = False
+        # Sahip değişince hayvan listesini o sahibe göre filtrele (HTMX)
+        self.fields["owner"].widget.attrs.update({
+            "hx-get": "/hayvanlar/secenekler/",
+            "hx-target": "#patient-field",
+            "hx-swap": "innerHTML",
+            "hx-trigger": "change",
+        })
 
 
 class ChargeLineForm(StyledFormMixin, forms.ModelForm):

@@ -1,0 +1,7 @@
+{# Sahibe bağlı hayvan seçimi (HTMX ile doldurulur). field: select name/id #}
+<select name="{{ field|default:'patient' }}" id="id_{{ field|default:'patient' }}" class="select">
+  <option value="">{% if has_owner %}— Hayvan seçin —{% else %}Önce sahip seçin{% endif %}</option>
+  {% for p in patients %}
+  <option value="{{ p.pk }}" {% if selected == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }} ({{ p.species.name }})</option>
+  {% endfor %}
+</select>

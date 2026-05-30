@@ -548,3 +548,22 @@ def test_reports_page(auth_client, admin_user, db):
     assert auth_client.get(
         reverse("reports:index"), {"date": timezone.localdate().isoformat()}
     ).status_code == 200
+
+
+def test_patient_options_filtered_by_owner(auth_client, db):
+    o1 = Owner.objects.create(first_name="Sahip", last_name="Bir", phone="0561")
+    o2 = Owner.objects.create(first_name="Sahip", last_name="İki", phone="0562")
+    sp = Species.objects.create(name="Kedi")
+    p1 = Patient.objects.create(owner=o1, name="Tekir", species=sp)
+    p2 = Patient.objects.create(owner=o2, name="Minnoş", species=sp)
+
+    # o1 seçilince sadece o1'in hayvanı dönmeli
+    resp = auth_client.get(reverse("patients:options"), {"owner": o1.pk})
+    body = resp.content.decode()
+    assert resp.status_code == 200
+    assert "Tekir" in body and "Minnoş" not in body
+    assert f'value="{p1.pk}"' in body and f'value="{p2.pk}"' not in body
+
+    # owner verilmezse hayvan listelenmez (sadece placeholder)
+    empty = auth_client.get(reverse("patients:options")).content.decode()
+    assert "Tekir" not in empty and "Minnoş" not in empty

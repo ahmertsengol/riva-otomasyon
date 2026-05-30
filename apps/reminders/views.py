@@ -92,6 +92,20 @@ class ManualMessageCreateView(LoginRequiredMixin, CreateView):
             initial["patient"] = patient_id
         return initial
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        from apps.patients.models import Patient
+
+        owner_id = self.request.GET.get("owner")
+        ctx["init_patients"] = (
+            Patient.objects.filter(owner_id=owner_id).select_related("species").order_by("name")
+            if owner_id
+            else Patient.objects.none()
+        )
+        ctx["init_selected"] = self.request.GET.get("patient", "")
+        ctx["init_has_owner"] = bool(owner_id)
+        return ctx
+
     def form_valid(self, form):
         clinic = ClinicSettings.load()
         provider = get_provider()

@@ -84,6 +84,16 @@ class ChargeCreateView(LoginRequiredMixin, CreateView):
             ctx["formset"] = ChargeLineFormSet(self.request.POST)
         else:
             ctx["formset"] = ChargeLineFormSet()
+        from apps.patients.models import Patient
+
+        owner_id = self.request.GET.get("owner")
+        ctx["init_patients"] = (
+            Patient.objects.filter(owner_id=owner_id).select_related("species").order_by("name")
+            if owner_id
+            else Patient.objects.none()
+        )
+        ctx["init_selected"] = self.request.GET.get("patient", "")
+        ctx["init_has_owner"] = bool(owner_id)
         return ctx
 
     def form_valid(self, form):

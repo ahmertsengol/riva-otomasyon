@@ -16,9 +16,17 @@ class ManualMessageForm(StyledFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["patient"].required = False
+        self.fields["patient"].label = "Hayvan"
         self.fields["owner"].queryset = self.fields["owner"].queryset.order_by(
             "first_name", "last_name"
         )
+        # Sahip değişince hayvan listesini o sahibe göre filtrele (HTMX)
+        self.fields["owner"].widget.attrs.update({
+            "hx-get": "/hayvanlar/secenekler/",
+            "hx-target": "#patient-field",
+            "hx-swap": "innerHTML",
+            "hx-trigger": "change",
+        })
 
 
 class MessageTemplateForm(StyledFormMixin, forms.ModelForm):

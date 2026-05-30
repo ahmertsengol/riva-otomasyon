@@ -1,13 +1,36 @@
 from __future__ import annotations
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from .forms import PatientForm
 from .models import Patient
+
+
+@login_required
+def patient_options(request):
+    """
+    Seçilen sahibe ait hayvanların <option>'larını döner (HTMX ile sahip değişince
+    hayvan listesini filtrelemek için). `field` ile select'in name/id'si ayarlanabilir.
+    """
+    owner_id = request.GET.get("owner")
+    selected = request.GET.get("patient") or request.GET.get("selected") or ""
+    field = request.GET.get("field", "patient")
+    patients = (
+        Patient.objects.filter(owner_id=owner_id).select_related("species").order_by("name")
+        if owner_id
+        else Patient.objects.none()
+    )
+    return render(
+        request,
+        "patients/_patient_select.html",
+        {"patients": patients, "selected": str(selected), "field": field, "has_owner": bool(owner_id)},
+    )
 
 
 class PatientListView(LoginRequiredMixin, ListView):
