@@ -1,5 +1,8 @@
-# Riva Otomasyon — demo kurulumu (tek komut: docker compose up)
-# Klinik PC'sinde sadece Docker Desktop kurulu olması yeterlidir.
+# Riva Otomasyon — KLİNİK kurulumu (oto-güncellemeli).
+#   docker compose up -d
+# GHCR'daki hazır imajı çeker; her `git push` sonrası GitHub Actions yeni imaj yayınlar
+# ve buradaki Watchtower onu otomatik indirip uygulamayı günceller (build gerekmez).
+# Kaynaktan derlemek için: docker compose -f docker-compose.build.yml up -d --build
 services:
   db:
     image: postgres:16
@@ -14,9 +17,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
 
   web:
-    build: .
+    image: ghcr.io/ahmertsengol/riva-otomasyon:latest
+    pull_policy: always
     environment:
       DJANGO_SETTINGS_MODULE: riva.settings.dev
       DEBUG: "True"
@@ -30,6 +35,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+    labels:
+      # Watchtower yalnızca bu etiketli konteyneri otomatik günceller
+      com.centurylinklabs.watchtower.enable: "true"
+
+  # Oto-güncelleyici: GHCR'ı periyodik kontrol eder, yeni imaj varsa web'i yeniler
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 60 --label-enable --cleanup --include-restarting
     restart: unless-stopped
 
 volumes:

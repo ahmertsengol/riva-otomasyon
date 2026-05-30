@@ -23,14 +23,33 @@ cd riva-otomasyon
 Proje klasöründe **PowerShell** aç (klasörde boş alana Shift+Sağ tık → "PowerShell penceresi aç")
 ve şunu yaz:
 ```powershell
-docker compose up -d --build
+docker compose up -d
 ```
-- İlk seferde imaj indirilip kurulur (internet ile ~birkaç dakika). Sonraki açılışlar saniyeler sürer.
+- GitHub'da yayınlanan **hazır imaj** indirilir (klinik PC'sinde derleme yapılmaz).
 - Otomatik olarak: veritabanı kurulur, tablolar oluşturulur, **örnek veri** yüklenir.
+- Ayrıca **Watchtower** adlı bir oto-güncelleyici başlar (aşağıya bakın).
+
+> İnternet yoksa veya imaj henüz yayınlanmadıysa, kaynaktan derleyerek de çalıştırabilirsin:
+> `docker compose -f docker-compose.build.yml up -d --build`
 
 ## 4) Aç ve giriş yap
 Tarayıcıdan: **http://localhost:8000**
 Giriş: **admin / admin123**
+
+## 🔄 Otomatik güncelleme (her push'ta)
+Sistem "kendini güncelleyen uygulama" gibi çalışır:
+
+1. Geliştirici `git push` yapar →
+2. **GitHub Actions** yeni Docker imajını otomatik derleyip `ghcr.io`'ya yükler →
+3. Klinik PC'sindeki **Watchtower** (her ~60 sn'de bir kontrol eder) yeni imajı görür,
+   indirir ve uygulamayı **otomatik yeniden başlatır**. Klinikte hiçbir şey yapman gerekmez.
+
+Güncelleme yaklaşık **1–2 dakika** içinde klinik PC'sine yansır. Verilerin (hasta, randevu…)
+korunur; sadece uygulama kodu yenilenir.
+
+> **Tek seferlik gereklilik:** GHCR imaj paketinin "public" olması gerekir (yoksa klinik PC'si
+> indiremez). İlk push'tan sonra GitHub'da repo → **Packages → riva-otomasyon → Package settings
+> → Change visibility → Public** yapılır. (Geliştirici bir kez yapar.)
 
 ## Günlük kullanım
 | İşlem | Komut |
@@ -39,7 +58,8 @@ Giriş: **admin / admin123**
 | Durdur | `docker compose down` |
 | Yeniden başlat | `docker compose restart` |
 | Günlük/şifre kodu vb. logları gör | `docker compose logs -f web` |
-| Güncelle (yeni sürüm) | `git pull` → `docker compose up -d --build` |
+| Güncelle | **Otomatik** (Watchtower) — elle bir şey yapmana gerek yok |
+| Hemen güncelle (beklemeden) | `docker compose pull web && docker compose up -d` |
 
 > **Şifre sıfırlama kodu (OTP):** Demo'da e-posta gerçekten gönderilmez; kod konteyner
 > loglarına yazılır → `docker compose logs web` ile görebilirsin.

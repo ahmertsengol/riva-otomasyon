@@ -11,9 +11,12 @@ prod (VPS + Docker) notları `docs/` altındadır.
 ## 🚀 Hızlı Demo (klinik PC'si — Windows + Docker)
 Sadece Docker Desktop kurun, sonra proje klasöründe:
 ```bash
-docker compose up -d --build
+docker compose up -d          # GHCR'daki hazır imajı çeker + oto-güncelleyici (Watchtower)
 ```
-→ http://localhost:8000 · giriş **admin / admin123**. Adım adım anlatım: **`docs/DEMO_KURULUM.md`**.
+→ http://localhost:8000 · giriş **admin / admin123**.
+Her `git push` sonrası uygulama klinik PC'sinde **otomatik güncellenir** (GitHub Actions → GHCR → Watchtower).
+Kaynaktan derlemek için: `docker compose -f docker-compose.build.yml up -d --build`.
+Adım adım: **`docs/DEMO_KURULUM.md`**.
 
 ## Gereksinimler (lokal)
 - Python 3.11+
