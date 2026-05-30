@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}{{ patient.name }} · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div x-data="{ tab: 'genel' }">
+
+  {# ---- Profil başlığı ---- #}
+  <div class="card card-pad mb-4">
+    <div class="flex flex-wrap items-start gap-4">
+      <span class="h-20 w-20 rounded-xl bg-slate-100 grid place-items-center overflow-hidden shrink-0">
+        {% if patient.photo %}<img src="{{ patient.photo.url }}" class="h-full w-full object-cover">
+        {% else %}{% include "partials/_icon.html" with name="paw" class="text-slate-300" %}{% endif %}
+      </span>
+      <div class="flex-1 min-w-[12rem]">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="page-title">{{ patient.name }}</h1>
+          {% if patient.deceased %}<span class="badge badge-neutral">Vefat</span>{% endif %}
+        </div>
+        <p class="text-sm text-slate-500">
+          {{ patient.species.name }}{% if patient.breed %} · {{ patient.breed }}{% endif %}
+          · {{ patient.get_sex_display }} · {{ patient.age_display }}
+        </p>
+        <p class="text-sm mt-1">
+          Sahip: <a href="{% url 'owners:detail' patient.owner.pk %}" class="text-brand-700 hover:underline font-medium">{{ patient.owner.full_name }}</a>
+          <span class="text-slate-400">· {{ patient.owner.phone }}</span>
+        </p>
+        {% if patient.allergies or patient.chronic_conditions %}
+        <div class="mt-2 flex flex-wrap gap-1.5">
+          {% if patient.allergies %}<span class="badge badge-danger">Alerji: {{ patient.allergies|truncatechars:40 }}</span>{% endif %}
+          {% if patient.chronic_conditions %}<span class="badge badge-warning">Kronik: {{ patient.chronic_conditions|truncatechars:40 }}</span>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href="{% url 'appointments:create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="calendar" %}Randevu</a>
+        <a href="{% url 'medical:examination_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="stethoscope" %}Muayene</a>
+        <a href="{% url 'medical:prescription_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="file" %}Reçete</a>
+        <a href="{% url 'medical:operation_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="clock" %}Operasyon</a>
+        <a href="{% url 'medical:lab_result_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="file" %}Lab</a>
+        <a href="{% url 'medical:note_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="plus" %}Not</a>
+        <a href="{% url 'vaccines:record_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="syringe" %}Aşı</a>
+        <a href="{% url 'patients:update' patient.pk %}" class="btn btn-secondary btn-sm">Düzenle</a>
+      </div>
+    </div>
+  </div>
+
+  {# ---- Sekmeler ---- #}
+  <div class="border-b border-slate-200 mb-4 flex gap-1 overflow-x-auto">
+    {% for key, label in tab_list %}
+    <button @click="tab='{{ key }}'"
+            :class="tab==='{{ key }}' ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-800'"
+            class="px-3 py-2 text-sm font-medium border-b-2 whitespace-nowrap -mb-px">{{ label }}</button>
+    {% endfor %}
+  </div>
+
+  {# Genel #}
+  <div x-show="tab==='genel'" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="card card-pad">
+      <h2 class="section-title mb-3">Genel Bilgiler</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between"><dt class="text-slate-500">Tür</dt><dd class="font-medium">{{ patient.species.name }}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Irk</dt><dd>{{ patient.breed|default:"—" }}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Cinsiyet</dt><dd>{{ patient.get_sex_display }}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Yaş</dt><dd>{{ patient.age_display }}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Kısırlaştırma</dt><dd>{{ patient.get_neutered_display }}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Renk</dt><dd>{{ patient.color|default:"—" }}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Kilo</dt><dd>{% if patient.weight %}{{ patient.weight }} kg{% else %}—{% endif %}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Mikroçip</dt><dd>{{ patient.microchip_no|default:"—" }}</dd></div>
+      </dl>
+    </div>
+    {% if patient.notes %}
+    <div class="card card-pad lg:col-span-2">
+      <h2 class="section-title mb-2">Notlar</h2>
+      <p class="text-sm text-slate-700 whitespace-pre-line">{{ patient.notes }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Zaman çizelgesi #}
+  <div x-show="tab==='timeline'" x-cloak>
+    {% include "patients/_timeline.html" with timeline=timeline %}
+  </div>
+
+  {# Randevular #}
+  <div x-show="tab==='randevular'" x-cloak>
+    <div class="card">
+      <div class="card-pad flex items-center justify-between border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">Randevular</h2>
+        <a href="{% url 'appointments:create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="calendar" %}Yeni Randevu</a>
+      </div>
+      {% if appointments %}
+      <div class="divide-y divide-slate-50">
+        {% for a in appointments %}
+        <a href="{% url 'appointments:detail' a.pk %}" class="block px-4 py-3 hover:bg-brand-50/40">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-medium text-slate-900">{{ a.starts_at|date:"d F Y, H:i" }}</div>
+              <div class="text-xs text-slate-500">
+                {{ a.get_type_display }}
+                {% if a.assigned_vet %} · {{ a.assigned_vet.display_name }}{% endif %}
+              </div>
+            </div>
+            {% include "partials/_status_badge.html" with status=a.status label=a.get_status_display %}
+          </div>
+          {% if a.note %}<p class="text-xs text-slate-500 mt-2 line-clamp-2">{{ a.note }}</p>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-10">Bu hayvana ait randevu yok.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Muayeneler #}
+  <div x-show="tab==='muayeneler'" x-cloak>
+    <div class="card">
+      <div class="card-pad flex items-center justify-between border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">Muayeneler</h2>
+        <a href="{% url 'medical:examination_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="stethoscope" %}Yeni Muayene</a>
+      </div>
+      {% if examinations %}
+      <div class="divide-y divide-slate-50">
+        {% for exam in examinations %}
+        <a href="{% url 'medical:examination_detail' exam.pk %}" class="block px-4 py-3 hover:bg-brand-50/40">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-medium text-slate-900">{{ exam.created_at|date:"d F Y, H:i" }}</div>
+              <div class="text-xs text-slate-500">
+                {{ exam.complaint|default:"Muayene kaydı"|truncatechars:80 }}
+                {% if exam.vet %} · {{ exam.vet.display_name }}{% endif %}
+              </div>
+            </div>
+            {% if exam.follow_up_date %}<span class="badge badge-warning">Kontrol: {{ exam.follow_up_date|date:"d.m.Y" }}</span>{% else %}<span class="badge badge-success">Muayene</span>{% endif %}
+          </div>
+          {% if exam.diagnosis %}<p class="text-xs text-slate-500 mt-2 line-clamp-2">{{ exam.diagnosis }}</p>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-10">Bu hayvana ait muayene kaydı yok.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Operasyonlar #}
+  <div x-show="tab==='operasyonlar'" x-cloak>
+    <div class="card">
+      <div class="card-pad flex items-center justify-between border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">Operasyonlar</h2>
+        <a href="{% url 'medical:operation_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="clock" %}Yeni Operasyon</a>
+      </div>
+      {% if operations %}
+      <div class="divide-y divide-slate-50">
+        {% for operation in operations %}
+        <a href="{% url 'medical:operation_detail' operation.pk %}" class="block px-4 py-3 hover:bg-brand-50/40">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-medium text-slate-900">{{ operation.date|date:"d F Y, H:i" }}</div>
+              <div class="text-xs text-slate-500">{{ operation.type }}{% if operation.vet %} · {{ operation.vet.display_name }}{% endif %}</div>
+            </div>
+            {% if operation.follow_up_date %}<span class="badge badge-warning">Kontrol: {{ operation.follow_up_date|date:"d.m.Y" }}</span>{% else %}<span class="badge badge-warning">Operasyon</span>{% endif %}
+          </div>
+          {% if operation.result %}<p class="text-xs text-slate-500 mt-2 line-clamp-2">{{ operation.result }}</p>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-10">Bu hayvana ait operasyon kaydı yok.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Laboratuvar #}
+  <div x-show="tab==='lab'" x-cloak>
+    <div class="card">
+      <div class="card-pad flex items-center justify-between border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">Laboratuvar Sonuçları</h2>
+        <a href="{% url 'medical:lab_result_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="file" %}Yeni Lab</a>
+      </div>
+      {% if lab_results %}
+      <div class="divide-y divide-slate-50">
+        {% for lab in lab_results %}
+        <a href="{% url 'medical:lab_result_detail' lab.pk %}" class="block px-4 py-3 hover:bg-brand-50/40">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-medium text-slate-900">{{ lab.test_name }}</div>
+              <div class="text-xs text-slate-500">{{ lab.date|date:"d F Y" }}{% if lab.examination %} · Muayene: {{ lab.examination.created_at|date:"d.m.Y" }}{% endif %}</div>
+            </div>
+            <span class="badge badge-info">Lab</span>
+          </div>
+          {% if lab.result_note %}<p class="text-xs text-slate-500 mt-2 line-clamp-2">{{ lab.result_note }}</p>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-10">Bu hayvana ait laboratuvar sonucu yok.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Notlar #}
+  <div x-show="tab==='notlar'" x-cloak>
+    <div class="card">
+      <div class="card-pad flex items-center justify-between border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">Tıbbi Notlar</h2>
+        <a href="{% url 'medical:note_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="plus" %}Yeni Not</a>
+      </div>
+      {% if medical_notes %}
+      <div class="divide-y divide-slate-50">
+        {% for note in medical_notes %}
+        <a href="{% url 'medical:note_detail' note.pk %}" class="block px-4 py-3 hover:bg-brand-50/40">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="font-medium text-slate-900">{{ note.created_at|date:"d F Y, H:i" }}</div>
+            <span class="badge badge-neutral">Not</span>
+          </div>
+          <p class="text-sm text-slate-600 mt-1 line-clamp-2">{{ note.body }}</p>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-10">Bu hayvana ait tıbbi not yok.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Aşılar #}
+  <div x-show="tab==='asilar'" x-cloak>
+    <div class="card">
+      <div class="card-pad flex items-center justify-between border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">Aşılar</h2>
+        <div class="flex gap-2">
+          {% if vaccine_records %}<a href="{% url 'vaccines:history_pdf' patient.pk %}" target="_blank" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="file" %}Geçmiş (PDF)</a>{% endif %}
+          <a href="{% url 'vaccines:record_create' %}?patient={{ patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="syringe" %}Aşı Uygula</a>
+        </div>
+      </div>
+      {% if vaccine_records %}
+      <div class="divide-y divide-slate-50">
+        {% for record in vaccine_records %}
+        <a href="{% url 'vaccines:record_detail' record.pk %}" class="block px-4 py-3 hover:bg-brand-50/40">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-medium text-slate-900">{{ record.display_name }}</div>
+              <div class="text-xs text-slate-500">
+                Uygulama: {{ record.applied_at|date:"d F Y" }}
+                {% if record.vet %} · {{ record.vet.display_name }}{% endif %}
+              </div>
+            </div>
+            {% if record.is_overdue %}<span class="badge badge-danger">Gecikti: {{ record.next_due_at|date:"d.m.Y" }}</span>{% elif record.next_due_at %}<span class="badge badge-warning">Sonraki: {{ record.next_due_at|date:"d.m.Y" }}</span>{% else %}<span class="badge badge-success">Tamamlandı</span>{% endif %}
+          </div>
+          {% if record.note %}<p class="text-xs text-slate-500 mt-2 line-clamp-2">{{ record.note }}</p>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-10">Bu hayvana ait aşı kaydı yok.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Diğer sekmeler — ilgili modüller bu alanları dolduracak #}
+  <div x-show="tab==='dosyalar'" x-cloak><div class="card card-pad text-slate-400 text-center py-10">Dosya modülü ile eklenecek.</div></div>
+</div>
+{% endblock %}

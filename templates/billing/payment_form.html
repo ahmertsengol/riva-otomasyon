@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Tahsilat · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <div class="flex items-center gap-2 mb-5">
+    <a href="{% if charge %}{% url 'billing:charge_detail' charge.pk %}{% else %}{% url 'billing:index' %}{% endif %}" class="btn btn-ghost px-2">‹</a>
+    <h1 class="page-title">Tahsilat Ekle</h1>
+  </div>
+
+  {% if charge %}
+  <div class="card card-pad mb-3 text-sm">
+    <div class="flex justify-between"><span class="text-slate-500">İşlem</span><span class="font-medium">#{{ charge.pk }} · {{ charge.owner.full_name }}</span></div>
+    <div class="flex justify-between"><span class="text-slate-500">Kalan</span><span class="font-medium text-red-600">{{ charge.balance|floatformat:2 }} ₺</span></div>
+  </div>
+  {% endif %}
+
+  <form method="post" class="card card-pad space-y-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    {% if not charge %}{% include "partials/_field.html" with field=form.charge %}{% else %}{{ form.charge }}{% endif %}
+    <div class="grid sm:grid-cols-2 gap-4">
+      {% include "partials/_field.html" with field=form.amount %}
+      {% include "partials/_field.html" with field=form.method %}
+    </div>
+    {% include "partials/_field.html" with field=form.paid_at %}
+    {% include "partials/_field.html" with field=form.note %}
+    <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
+      <a href="{% url 'billing:index' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

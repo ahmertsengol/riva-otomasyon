@@ -1,0 +1,187 @@
+from __future__ import annotations
+
+import json
+from datetime import timedelta
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
+from django.utils.dateparse import parse_datetime
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.views.generic import CreateView, DeleteView, DetailView, UpdateView
+
+from apps.accounts.models import User
+
+from .forms import AppointmentForm
+from .models import Appointment, AppointmentRequest
+
+
+@login_required
+def calendar(request):
+    vets = User.objects.filter(role__in=[User.Role.VET, User.Role.ADMIN], is_active=True)
+    return render(
+        request,
+        "appointments/calendar.html",
+        {"vets": vets, "statuses": Appointment.Status.choices},
+    )
+
+
+@login_required
+def events(request):
+    """FullCalendar için JSON olay akışı."""
+    qs = Appointment.objects.select_related("patient", "owner", "assigned_vet")
+    start = request.GET.get("start")
+    end = request.GET.get("end")
+    if start:
+        qs = qs.filter(starts_at__gte=parse_datetime(start))
+    if end:
+        qs = qs.filter(starts_at__lte=parse_datetime(end))
+    vet = request.GET.get("vet")
+    if vet:
+        qs = qs.filter(assigned_vet_id=vet)
+
+    data = [
+        {
+            "id": a.pk,
+            "title": f"{a.patient.name} · {a.get_type_display()}",
+            "start": a.starts_at.isoformat(),
+            "end": (a.starts_at + timedelta(minutes=a.duration_min)).isoformat(),
+            "color": a.color,
+            "url": reverse("appointments:detail", args=[a.pk]),
+            "extendedProps": {"status": a.get_status_display()},
+        }
+        for a in qs
+    ]
+    return JsonResponse(data, safe=False)
+
+
+class AppointmentCreateView(LoginRequiredMixin, CreateView):
+    model = Appointment
+    form_class = AppointmentForm
+    template_name = "appointments/form.html"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if pid := self.request.GET.get("patient"):
+            initial["patient"] = pid
+        if d := self.request.GET.get("date"):
+            initial["starts_at"] = d
+        if rid := self.request.GET.get("from_request"):
+            req = AppointmentRequest.objects.filter(pk=rid).first()
+            if req:
+                initial["note"] = (
+                    f"[Talep] {req.name} · {req.phone}\n"
+                    f"{req.pet_name} ({req.pet_species}) · {req.subject}\n{req.message}"
+                ).strip()
+        return initial
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        rid = self.request.GET.get("from_request")
+        if rid:
+            AppointmentRequest.objects.filter(pk=rid).update(
+                status=AppointmentRequest.CONVERTED, linked_appointment=self.object
+            )
+        messages.success(self.request, "Randevu oluşturuldu.")
+        return response
+
+
+class AppointmentDetailView(LoginRequiredMixin, DetailView):
+    model = Appointment
+    template_name = "appointments/detail.html"
+    context_object_name = "appt"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["statuses"] = Appointment.Status.choices
+        return ctx
+
+
+class AppointmentUpdateView(LoginRequiredMixin, UpdateView):
+    model = Appointment
+    form_class = AppointmentForm
+    template_name = "appointments/form.html"
+
+    def form_valid(self, form):
+        messages.success(self.request, "Randevu güncellendi.")
+        return super().form_valid(form)
+
+
+class AppointmentDeleteView(LoginRequiredMixin, DeleteView):
+    model = Appointment
+    template_name = "appointments/confirm_delete.html"
+    success_url = reverse_lazy("appointments:calendar")
+
+    def form_valid(self, form):
+        messages.success(self.request, "Randevu silindi.")
+        return super().form_valid(form)
+
+
+@login_required
+@require_POST
+def set_status(request, pk):
+    appt = get_object_or_404(Appointment, pk=pk)
+    status = request.POST.get("status")
+    if status in dict(Appointment.Status.choices):
+        appt.status = status
+        appt.save(update_fields=["status", "updated_at", "updated_by"])
+        messages.success(request, "Durum güncellendi.")
+    return redirect("appointments:detail", pk=pk)
+
+
+# ---------------------------------------------------------------------------
+# Randevu Talepleri
+# ---------------------------------------------------------------------------
+@login_required
+def request_list(request):
+    requests_qs = AppointmentRequest.objects.all()
+    status = request.GET.get("status", AppointmentRequest.NEW)
+    if status in dict(AppointmentRequest.STATUS_CHOICES):
+        requests_qs = requests_qs.filter(status=status)
+    return render(
+        request,
+        "appointments/requests.html",
+        {"requests": requests_qs, "active_status": status},
+    )
+
+
+@login_required
+@require_POST
+def request_dismiss(request, pk):
+    AppointmentRequest.objects.filter(pk=pk).update(status=AppointmentRequest.DISMISSED)
+    messages.info(request, "Talep yok sayıldı.")
+    return redirect("appointments:request_list")
+
+
+@csrf_exempt
+@require_POST
+def api_create_request(request):
+    """
+    Landing page'den gelen randevu talebi (public). MVP'de landing henüz bağlı değil;
+    endpoint hazır bırakılır (bkz. docs/LANDING_INTEGRATION.md).
+    """
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "invalid json"}, status=400)
+
+    name = (payload.get("name") or "").strip()
+    phone = (payload.get("phone") or "").strip()
+    if not name or not phone:
+        return JsonResponse({"ok": False, "error": "name and phone required"}, status=400)
+
+    AppointmentRequest.objects.create(
+        name=name[:160],
+        phone=phone[:30],
+        pet_name=(payload.get("pet_name") or "")[:80],
+        pet_species=(payload.get("pet_species") or "")[:60],
+        requested_at=(payload.get("requested_at") or "")[:120],
+        subject=(payload.get("subject") or "")[:120],
+        message=payload.get("message") or "",
+        source=AppointmentRequest.SOURCE_WEB,
+    )
+    return JsonResponse({"ok": True})

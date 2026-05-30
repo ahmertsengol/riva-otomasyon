@@ -1,0 +1,67 @@
+{# Üst bar — mobil menü, global arama (Ctrl/⌘+K), hızlı aksiyon, kullanıcı menüsü #}
+<header class="h-16 sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200
+               flex items-center gap-3 px-4 sm:px-6">
+  <button @click="sidebar = !sidebar" class="lg:hidden btn btn-ghost px-2" aria-label="Menü">
+    {% include "partials/_icon.html" with name="menu" %}
+  </button>
+
+  {# Global arama #}
+  <form action="/ara/" method="get" class="flex-1 max-w-xl">
+    <div class="relative">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+        {% include "partials/_icon.html" with name="search" %}
+      </span>
+      <input type="search" name="q" value="{{ request.GET.q }}"
+             placeholder="Telefon, sahip, hayvan veya mikroçip ara…"
+             class="input pl-9 pr-16"
+             x-data
+             @keydown.window.prevent.cmd.k="$el.focus()"
+             @keydown.window.prevent.ctrl.k="$el.focus()">
+      <kbd class="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 text-[11px]
+                  text-slate-400 border border-slate-200 rounded px-1.5 py-0.5">⌘K</kbd>
+    </div>
+  </form>
+
+  {# Hızlı aksiyon menüsü #}
+  <div class="relative" x-data="{ open: false }">
+    <button @click="open = !open" class="btn btn-primary">
+      {% include "partials/_icon.html" with name="plus" %}<span class="hidden sm:inline">Yeni</span>
+    </button>
+    <div x-show="open" x-cloak @click.outside="open = false"
+         class="absolute right-0 mt-2 w-56 card p-1.5 z-40">
+      <a href="/sahipler/yeni/" class="nav-link">{% include "partials/_icon.html" with name="users" %}Yeni Sahip</a>
+      <a href="/hayvanlar/yeni/" class="nav-link">{% include "partials/_icon.html" with name="paw" %}Yeni Hayvan</a>
+      <a href="/randevular/yeni/" class="nav-link">{% include "partials/_icon.html" with name="calendar" %}Yeni Randevu</a>
+      <a href="{% url 'medical:examination_create' %}" class="nav-link">{% include "partials/_icon.html" with name="stethoscope" %}Yeni Muayene</a>
+      <a href="{% url 'medical:prescription_create' %}" class="nav-link">{% include "partials/_icon.html" with name="file" %}Yeni Reçete</a>
+      <a href="{% url 'medical:operation_create' %}" class="nav-link">{% include "partials/_icon.html" with name="clock" %}Yeni Operasyon</a>
+      <a href="{% url 'medical:lab_result_create' %}" class="nav-link">{% include "partials/_icon.html" with name="file" %}Yeni Lab</a>
+      <a href="{% url 'vaccines:record_create' %}" class="nav-link">{% include "partials/_icon.html" with name="syringe" %}Aşı Uygula</a>
+      <a href="/hatirlatmalar/" class="nav-link">{% include "partials/_icon.html" with name="bell" %}Hatırlatma Gönder</a>
+      <a href="/kasa/tahsilat/yeni/" class="nav-link">{% include "partials/_icon.html" with name="wallet" %}Tahsilat Ekle</a>
+    </div>
+  </div>
+
+  {# Kullanıcı menüsü #}
+  <div class="relative" x-data="{ open: false }">
+    <button @click="open = !open" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100">
+      <span class="h-8 w-8 rounded-full bg-brand-100 text-brand-700 grid place-items-center text-sm font-semibold">
+        {{ request.user.display_name|slice:":1"|upper }}
+      </span>
+      <span class="hidden sm:block text-sm font-medium text-slate-700">{{ request.user.display_name }}</span>
+    </button>
+    <div x-show="open" x-cloak @click.outside="open = false"
+         class="absolute right-0 mt-2 w-52 card p-1.5 z-40">
+      <div class="px-3 py-2 border-b border-slate-100">
+        <div class="text-sm font-medium text-slate-800">{{ request.user.display_name }}</div>
+        <div class="text-xs text-slate-400">{{ request.user.get_role_display }}</div>
+      </div>
+      <a href="/ayarlar/" class="nav-link">{% include "partials/_icon.html" with name="settings" %}Ayarlar</a>
+      <form action="{% url 'accounts:logout' %}" method="post">{% csrf_token %}
+        <button type="submit" class="nav-link w-full text-left text-red-600 hover:bg-red-50">
+          {% include "partials/_icon.html" with name="logout" %}Çıkış Yap
+        </button>
+      </form>
+    </div>
+  </div>
+</header>

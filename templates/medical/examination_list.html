@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Muayeneler · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <h1 class="page-title">Muayeneler</h1>
+  <a href="{% url 'medical:examination_create' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="plus" %}Yeni Muayene</a>
+</div>
+
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead>
+      <tr><th>Tarih</th><th>Hayvan</th><th>Sahip</th><th>Hekim</th><th>Tanı</th><th>Kontrol</th></tr>
+    </thead>
+    <tbody>
+      {% for exam in examinations %}
+      <tr class="cursor-pointer" onclick="window.location='{% url 'medical:examination_detail' exam.pk %}'">
+        <td>{{ exam.created_at|date:"d.m.Y H:i" }}</td>
+        <td class="font-medium text-slate-900">{{ exam.patient.name }}</td>
+        <td>{{ exam.patient.owner.full_name }}</td>
+        <td>{{ exam.vet.display_name|default:"—" }}</td>
+        <td>{{ exam.diagnosis|default:"—"|truncatechars:40 }}</td>
+        <td>{% if exam.follow_up_date %}<span class="badge badge-warning">{{ exam.follow_up_date|date:"d.m.Y" }}</span>{% else %}<span class="text-slate-400">—</span>{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-slate-400 py-10">Henüz muayene kaydı yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "partials/_pagination.html" %}
+{% endblock %}

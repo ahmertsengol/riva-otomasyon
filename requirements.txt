@@ -1,0 +1,9 @@
+# Çalışma zamanı bağımlılıkları (Docker imajı bunları kurar).
+# Geliştirme araçları (pytest, ruff) için: pip install -e ".[dev]"
+Django>=5.1,<5.2
+psycopg2-binary>=2.9
+django-environ>=0.11
+whitenoise>=6.6
+weasyprint>=65
+Pillow>=10
+gunicorn>=22

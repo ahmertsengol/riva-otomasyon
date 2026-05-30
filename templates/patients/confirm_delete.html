@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Hayvan Sil · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto card card-pad">
+  <h1 class="text-lg font-semibold text-slate-900 mb-2">Hayvan kaydını sil</h1>
+  <p class="text-sm text-slate-600 mb-4">
+    <strong>{{ patient.name }}</strong> ve tüm tıbbi kayıtları silinecek. Bu işlem geri alınamaz.
+  </p>
+  <form method="post" class="flex justify-end gap-2">
+    {% csrf_token %}
+    <a href="{% url 'patients:detail' patient.pk %}" class="btn btn-secondary">Vazgeç</a>
+    <button type="submit" class="btn btn-danger">Evet, Sil</button>
+  </form>
+</div>
+{% endblock %}

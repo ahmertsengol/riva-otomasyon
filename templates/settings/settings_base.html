@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Ayarlar · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<h1 class="page-title mb-4">Ayarlar</h1>
+<div class="grid lg:grid-cols-[14rem_1fr] gap-5">
+  <nav class="space-y-0.5">
+    {% with path=request.path %}
+    <a href="{% url 'settings:index' %}" class="nav-link {% if path == '/ayarlar/' %}nav-link-active{% endif %}">{% include "partials/_icon.html" with name="settings" %}Klinik Bilgisi</a>
+    <a href="{% url 'settings:species' %}" class="nav-link {% if 'turler' in path %}nav-link-active{% endif %}">{% include "partials/_icon.html" with name="paw" %}Türler</a>
+    <a href="/asilar/protokoller/" class="nav-link {% if 'protokol' in path %}nav-link-active{% endif %}">{% include "partials/_icon.html" with name="syringe" %}Aşı Protokolleri</a>
+    <a href="/hatirlatmalar/sablonlar/" class="nav-link {% if 'sablon' in path %}nav-link-active{% endif %}">{% include "partials/_icon.html" with name="bell" %}Mesaj Şablonları</a>
+    <a href="{% url 'settings:audit_log' %}" class="nav-link {% if 'denetim' in path %}nav-link-active{% endif %}">{% include "partials/_icon.html" with name="file" %}Denetim Kaydı</a>
+    {% endwith %}
+  </nav>
+  <div>{% block settings_content %}{% endblock %}</div>
+</div>
+{% endblock %}

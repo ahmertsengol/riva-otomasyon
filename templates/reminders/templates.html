@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Şablonlar & Kurallar · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center gap-2 mb-5">
+  <a href="{% url 'reminders:queue' %}" class="btn btn-ghost px-2">‹</a>
+  <h1 class="page-title">Mesaj Şablonları & Hatırlatma Kuralları</h1>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-4">
+  {# Şablonlar #}
+  <div class="card">
+    <div class="card-pad flex items-center justify-between border-b border-slate-100">
+      <h2 class="font-semibold text-slate-800">Mesaj Şablonları</h2>
+      <a href="{% url 'reminders:template_create' %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="plus" %}Yeni</a>
+    </div>
+    <div class="divide-y divide-slate-50">
+      {% for t in templates %}
+      <div class="px-4 py-3 flex items-start justify-between gap-3">
+        <div>
+          <div class="font-medium text-slate-900">{{ t.name }}
+            <span class="badge badge-neutral">{{ t.get_type_display }}</span>
+            <span class="badge badge-info">{{ t.get_locale_display }}</span>
+            {% if not t.active %}<span class="badge badge-warning">Pasif</span>{% endif %}
+          </div>
+          <p class="text-xs text-slate-500 mt-1 whitespace-pre-line line-clamp-2">{{ t.body }}</p>
+        </div>
+        <a href="{% url 'reminders:template_update' t.pk %}" class="btn btn-ghost btn-sm">Düzenle</a>
+      </div>
+      {% empty %}
+      <div class="card-pad text-center text-slate-400 py-8">Şablon yok.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Kurallar #}
+  <div class="card">
+    <div class="card-pad flex items-center justify-between border-b border-slate-100">
+      <h2 class="font-semibold text-slate-800">Hatırlatma Kuralları</h2>
+      <a href="{% url 'reminders:rule_create' %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="plus" %}Yeni</a>
+    </div>
+    <div class="divide-y divide-slate-50">
+      {% for r in rules %}
+      <div class="px-4 py-3 flex items-start justify-between gap-3">
+        <div>
+          <div class="font-medium text-slate-900">{{ r.name }}
+            <span class="badge badge-neutral">{{ r.get_type_display }}</span>
+            {% if not r.active %}<span class="badge badge-warning">Pasif</span>{% endif %}
+          </div>
+          <div class="text-xs text-slate-500 mt-1">
+            {% if r.offset_days > 0 %}{{ r.offset_days }} gün önce{% elif r.offset_days == 0 %}Aynı gün{% else %}{{ r.offset_days|stringformat:"d" }} gün (gecikme sonrası){% endif %}
+            · Şablon: {{ r.template.name }}
+          </div>
+        </div>
+        <a href="{% url 'reminders:rule_update' r.pk %}" class="btn btn-ghost btn-sm">Düzenle</a>
+      </div>
+      {% empty %}
+      <div class="card-pad text-center text-slate-400 py-8">Kural yok.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card card-pad mt-4 text-sm text-slate-500">
+  <strong class="text-slate-700">Yer tutucular:</strong>
+  {% verbatim %}<code>{{owner_name}}</code>, <code>{{pet_name}}</code>, <code>{{date}}</code>,
+  <code>{{time}}</code>, <code>{{vaccine}}</code>, <code>{{clinic}}</code>{% endverbatim %}
+</div>
+{% endblock %}

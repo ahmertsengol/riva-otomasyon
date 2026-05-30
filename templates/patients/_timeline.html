@@ -1,0 +1,22 @@
+{# Hayvan zaman çizelgesi. timeline: tarih sırasında olay listesi (medical.services.patient_timeline). #}
+{% if timeline %}
+<ol class="relative border-s-2 border-slate-100 ms-3 space-y-4">
+  {% for ev in timeline %}
+  <li class="ms-5">
+    <span class="absolute -start-2.5 mt-1 h-4 w-4 rounded-full border-2 border-white
+      {% if ev.tone == 'success' %}bg-emerald-500{% elif ev.tone == 'warning' %}bg-amber-500{% elif ev.tone == 'danger' %}bg-red-500{% elif ev.tone == 'info' %}bg-sky-500{% else %}bg-brand-500{% endif %}"></span>
+    <div class="card card-pad">
+      <div class="flex items-center justify-between gap-2">
+        <span class="badge badge-neutral">{{ ev.label }}</span>
+        <span class="text-xs text-slate-400">{{ ev.date|date:"d.m.Y H:i" }}</span>
+      </div>
+      <div class="mt-1.5 text-sm text-slate-700">{{ ev.title }}</div>
+      {% if ev.detail %}<div class="text-xs text-slate-500 mt-0.5">{{ ev.detail }}</div>{% endif %}
+      {% if ev.url %}<a href="{{ ev.url }}" class="text-xs text-brand-700 hover:underline mt-1 inline-block">Görüntüle →</a>{% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<div class="card card-pad text-center text-slate-400 py-10">Bu hayvan için henüz kayıt yok.</div>
+{% endif %}

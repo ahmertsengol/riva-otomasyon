@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Randevu · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="flex items-center justify-between gap-2 mb-5">
+    <div class="flex items-center gap-2">
+      <a href="{% url 'appointments:calendar' %}" class="btn btn-ghost px-2">‹</a>
+      <h1 class="page-title">Randevu</h1>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'appointments:update' appt.pk %}" class="btn btn-secondary btn-sm">Düzenle</a>
+      <a href="{% url 'medical:examination_create' %}?patient={{ appt.patient.pk }}&appointment={{ appt.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="stethoscope" %}Muayene</a>
+      <a href="{% url 'appointments:delete' appt.pk %}" class="btn btn-ghost btn-sm text-red-600">Sil</a>
+    </div>
+  </div>
+
+  <div class="card card-pad space-y-3">
+    <div class="flex items-center justify-between">
+      <span class="text-lg font-semibold text-slate-900">{{ appt.starts_at|date:"d F Y, H:i" }}</span>
+      {% include "partials/_status_badge.html" with status=appt.status label=appt.get_status_display %}
+    </div>
+    <dl class="grid sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
+      <div class="flex justify-between"><dt class="text-slate-500">Hayvan</dt><dd><a href="{% url 'patients:detail' appt.patient.pk %}" class="text-brand-700 hover:underline">{{ appt.patient.name }}</a></dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Sahip</dt><dd><a href="{% url 'owners:detail' appt.owner.pk %}" class="text-brand-700 hover:underline">{{ appt.owner.full_name }}</a></dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Telefon</dt><dd>{{ appt.phone_snapshot }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Tip</dt><dd>{{ appt.get_type_display }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Süre</dt><dd>{{ appt.duration_min }} dk</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Hekim</dt><dd>{{ appt.assigned_vet.display_name|default:"—" }}</dd></div>
+    </dl>
+    {% if appt.note %}<div class="text-sm text-slate-700 whitespace-pre-line border-t border-slate-100 pt-3">{{ appt.note }}</div>{% endif %}
+  </div>
+
+  {# Hızlı durum değiştirme #}
+  <div class="card card-pad mt-4">
+    <h2 class="section-title mb-2">Durumu güncelle</h2>
+    <form method="post" action="{% url 'appointments:set_status' appt.pk %}" class="flex flex-wrap gap-2">
+      {% csrf_token %}
+      {% for value, label in statuses %}
+      <button name="status" value="{{ value }}"
+              class="btn btn-sm {% if value == appt.status %}btn-primary{% else %}btn-secondary{% endif %}">{{ label }}</button>
+      {% endfor %}
+    </form>
+  </div>
+</div>
+{% endblock %}

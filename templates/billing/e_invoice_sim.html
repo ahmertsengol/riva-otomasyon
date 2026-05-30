@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}E-Fatura (Simülasyon) · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="flex items-center gap-2 mb-4">
+    <a href="{% url 'billing:charge_detail' charge.pk %}" class="btn btn-ghost px-2">‹</a>
+    <h1 class="page-title">E-Fatura Önizleme</h1>
+  </div>
+
+  <div class="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 mb-4">
+    <strong>Simülasyon:</strong> Bu ekran gerçek e-fatura/e-arşiv kesmez. Türkiye'de e-fatura için
+    GİB özel entegratörü ile entegrasyon gerekir (Faz 3). Veri modeli bu entegrasyona hazırdır.
+  </div>
+
+  <div class="card card-pad">
+    <div class="flex justify-between items-start border-b border-slate-100 pb-4 mb-4">
+      <div>
+        <div class="text-lg font-semibold text-slate-900">{{ clinic.name }}</div>
+        <div class="text-sm text-slate-500">{{ clinic.address }}</div>
+        <div class="text-sm text-slate-500">{{ clinic.phone }}</div>
+      </div>
+      <div class="text-right text-sm">
+        <div class="font-semibold">FATURA (TASLAK)</div>
+        <div class="text-slate-500">No: SIM-{{ charge.pk }}</div>
+        <div class="text-slate-500">{{ charge.date|date:"d.m.Y" }}</div>
+      </div>
+    </div>
+
+    <div class="text-sm mb-4">
+      <div class="text-slate-500">Sayın</div>
+      <div class="font-medium text-slate-900">{{ charge.owner.full_name }}</div>
+      <div class="text-slate-500">{{ charge.owner.phone }}{% if charge.owner.address %} · {{ charge.owner.address }}{% endif %}</div>
+    </div>
+
+    <table class="table">
+      <thead><tr><th>Açıklama</th><th class="text-right">Adet</th><th class="text-right">Birim</th><th class="text-right">Tutar</th></tr></thead>
+      <tbody>
+        {% for l in lines %}
+        <tr><td>{{ l.description }}</td><td class="text-right">{{ l.qty }}</td><td class="text-right">{{ l.unit_price|floatformat:2 }} ₺</td><td class="text-right">{{ l.line_total|floatformat:2 }} ₺</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="border-t-2 border-slate-200"><td colspan="3" class="text-right font-semibold py-2 px-3">Genel Toplam</td><td class="text-right font-semibold py-2 px-3">{{ charge.total|floatformat:2 }} ₺</td></tr>
+      </tfoot>
+    </table>
+    <p class="text-xs text-slate-400 mt-4">KDV ve vergi alanları gerçek entegrasyonda hesaplanacaktır.</p>
+  </div>
+</div>
+{% endblock %}

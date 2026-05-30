@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Sahipler · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <h1 class="page-title">Sahipler</h1>
+  <a href="{% url 'owners:create' %}" class="btn btn-primary">
+    {% include "partials/_icon.html" with name="plus" %}Yeni Sahip
+  </a>
+</div>
+
+<form method="get" class="mb-4 max-w-md">
+  <div class="relative">
+    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{% include "partials/_icon.html" with name="search" %}</span>
+    <input type="search" name="q" value="{{ q }}" placeholder="Ad, soyad veya telefon…" class="input pl-9">
+  </div>
+</form>
+
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr>
+      <th>Ad Soyad</th><th>Telefon</th><th>Hayvan</th><th>İletişim</th><th class="text-right">Bakiye</th>
+    </tr></thead>
+    <tbody>
+      {% for owner in owners %}
+      <tr class="cursor-pointer" onclick="window.location='{% url 'owners:detail' owner.pk %}'">
+        <td class="font-medium text-slate-900">{{ owner.full_name }}</td>
+        <td>{{ owner.phone }}</td>
+        <td><span class="badge badge-neutral">{{ owner.pet_count }}</span></td>
+        <td class="text-slate-500">{{ owner.get_contact_pref_display }}</td>
+        <td class="text-right {% if owner.balance > 0 %}text-red-600 font-medium{% else %}text-slate-400{% endif %}">
+          {{ owner.balance|floatformat:0 }} ₺
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-slate-400 py-10">
+        {% if q %}"{{ q }}" için sahip bulunamadı.{% else %}Henüz sahip kaydı yok.{% endif %}
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "partials/_pagination.html" %}
+{% endblock %}

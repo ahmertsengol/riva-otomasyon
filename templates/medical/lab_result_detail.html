@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Lab Sonucu · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+    <div class="flex items-center gap-2">
+      <a href="{% url 'patients:detail' lab.patient.pk %}" class="btn btn-ghost px-2">‹</a>
+      <div>
+        <h1 class="page-title">{{ lab.test_name }}</h1>
+        <p class="text-sm text-slate-500">{{ lab.date|date:"d F Y" }}</p>
+      </div>
+    </div>
+    <a href="{% url 'patients:detail' lab.patient.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="paw" %}Hayvan</a>
+  </div>
+
+  <div class="card card-pad space-y-4">
+    <dl class="grid sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
+      <div class="flex justify-between"><dt class="text-slate-500">Hayvan</dt><dd class="font-medium">{{ lab.patient.name }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Sahip</dt><dd>{{ lab.patient.owner.full_name }}</dd></div>
+      {% if lab.examination %}<div class="flex justify-between"><dt class="text-slate-500">Muayene</dt><dd><a href="{% url 'medical:examination_detail' lab.examination.pk %}" class="text-brand-700 hover:underline">{{ lab.examination.created_at|date:"d.m.Y" }}</a></dd></div>{% endif %}
+      {% if lab.file %}<div class="flex justify-between"><dt class="text-slate-500">Dosya</dt><dd><a href="{{ lab.file.url }}" target="_blank" class="text-brand-700 hover:underline">Aç</a></dd></div>{% endif %}
+    </dl>
+    {% if lab.result_note %}
+    <div class="border-t border-slate-100 pt-4">
+      <h2 class="section-title mb-1">Sonuç Notu</h2>
+      <p class="text-sm text-slate-800 whitespace-pre-line">{{ lab.result_note }}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

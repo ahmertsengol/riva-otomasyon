@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}İşlem #{{ charge.pk }} · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+    <div class="flex items-center gap-2">
+      <a href="{% url 'billing:index' %}" class="btn btn-ghost px-2">‹</a>
+      <div>
+        <h1 class="page-title">İşlem #{{ charge.pk }}</h1>
+        <p class="text-sm text-slate-500">
+          <a href="{% url 'owners:detail' charge.owner.pk %}" class="text-brand-700 hover:underline">{{ charge.owner.full_name }}</a>
+          {% if charge.patient %} · {{ charge.patient.name }}{% endif %} · {{ charge.date|date:"d.m.Y" }}
+        </p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'billing:e_invoice_sim' charge.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="file" %}E-Fatura (sim.)</a>
+      {% if charge.balance > 0 %}<a href="{% url 'billing:charge_payment' charge.pk %}" class="btn btn-primary btn-sm">{% include "partials/_icon.html" with name="wallet" %}Tahsilat Ekle</a>{% endif %}
+    </div>
+  </div>
+
+  <div class="card overflow-hidden mb-4">
+    <table class="table">
+      <thead><tr><th>Açıklama</th><th class="text-right">Adet</th><th class="text-right">Birim</th><th class="text-right">Tutar</th></tr></thead>
+      <tbody>
+        {% for l in lines %}
+        <tr>
+          <td>{{ l.description }}{% if l.item %} <span class="text-slate-400 text-xs">({{ l.item.get_kind_display }})</span>{% endif %}</td>
+          <td class="text-right">{{ l.qty }}</td>
+          <td class="text-right">{{ l.unit_price|floatformat:2 }} ₺</td>
+          <td class="text-right font-medium">{{ l.line_total|floatformat:2 }} ₺</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-slate-400 py-6">Satır yok.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="border-t-2 border-slate-200"><td colspan="3" class="text-right font-semibold py-2 px-3">Toplam</td><td class="text-right font-semibold py-2 px-3">{{ charge.total|floatformat:2 }} ₺</td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="grid sm:grid-cols-3 gap-3 mb-4">
+    {% include "core/_stat.html" with label="Toplam" value=charge.total icon="file" tone="neutral" money=True %}
+    {% include "core/_stat.html" with label="Tahsil Edilen" value=charge.paid_amount icon="wallet" tone="success" money=True %}
+    {% include "core/_stat.html" with label="Kalan" value=charge.balance icon="clock" tone="danger" money=True %}
+  </div>
+
+  <div class="card">
+    <div class="card-pad border-b border-slate-100 flex items-center justify-between">
+      <h2 class="font-semibold text-slate-800">Tahsilatlar</h2>
+      {% include "billing/_charge_status.html" with charge=charge %}
+    </div>
+    <table class="table">
+      <thead><tr><th>Tarih</th><th>Yöntem</th><th>Not</th><th class="text-right">Tutar</th></tr></thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td class="text-slate-500">{{ p.paid_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ p.get_method_display }}</td>
+          <td class="text-slate-500">{{ p.note|default:"—" }}</td>
+          <td class="text-right font-medium">{{ p.amount|floatformat:2 }} ₺</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-slate-400 py-6">Henüz tahsilat yok.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

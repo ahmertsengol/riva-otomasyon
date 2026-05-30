@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Raporlar · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <div>
+    <h1 class="page-title">Raporlar</h1>
+    <p class="text-sm text-slate-500">{{ day|date:"d F Y, l" }}{% if is_today %} · bugün{% endif %}</p>
+  </div>
+  <form method="get" class="flex items-end gap-2">
+    <div>
+      <label class="label" for="date">Tarih</label>
+      <input type="date" id="date" name="date" value="{{ day|date:'Y-m-d' }}" class="input">
+    </div>
+    <button class="btn btn-primary">Göster</button>
+  </form>
+</div>
+
+<h2 class="section-title mb-2">Günlük</h2>
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+  {% include "core/_stat.html" with label="Randevu" value=daily.appointments icon="calendar" tone="brand" %}
+  {% include "core/_stat.html" with label="Muayene" value=daily.exams icon="stethoscope" tone="neutral" %}
+  {% include "core/_stat.html" with label="Yeni Müşteri" value=daily.new_owners icon="users" tone="info" %}
+  {% include "core/_stat.html" with label="Yeni Hayvan" value=daily.new_patients icon="paw" tone="info" %}
+  {% include "core/_stat.html" with label="Gönderilen Hatırlatma" value=daily.messages_sent icon="bell" tone="neutral" %}
+  {% include "core/_stat.html" with label="Tahsilat" value=daily.collection icon="wallet" tone="success" money=True %}
+</div>
+
+<h2 class="section-title mb-2">Aşılar</h2>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+  {% include "core/_stat.html" with label="Yaklaşan Aşı (30 gün)" value=vaccines.upcoming icon="syringe" tone="warning" href="/asilar/yaklasan/" %}
+  {% include "core/_stat.html" with label="Geciken Aşı" value=vaccines.overdue icon="syringe" tone="danger" href="/asilar/geciken/" %}
+</div>
+
+<h2 class="section-title mb-2">Finans</h2>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+  {% include "core/_stat.html" with label="Ödenmemiş İşlem" value=unpaid.count icon="file" tone="warning" href="/kasa/" %}
+  {% include "core/_stat.html" with label="Açık Bakiye" value=unpaid.outstanding icon="wallet" tone="danger" money=True %}
+</div>
+
+<p class="text-xs text-slate-400 mt-6">Ciro, kâr/zarar, hekim performansı gibi gelişmiş finans raporları sonraki fazda (Faz 6) eklenecektir.</p>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Yeni İşlem · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="flex items-center gap-2 mb-5">
+    <a href="{% url 'billing:index' %}" class="btn btn-ghost px-2">‹</a>
+    <h1 class="page-title">Yeni İşlem</h1>
+  </div>
+
+  <form method="post" class="card card-pad space-y-5">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="grid sm:grid-cols-3 gap-4">
+      {% include "partials/_field.html" with field=form.owner %}
+      {% include "partials/_field.html" with field=form.patient %}
+      {% include "partials/_field.html" with field=form.examination %}
+    </div>
+    {% include "partials/_field.html" with field=form.note %}
+
+    <div>
+      <h2 class="section-title mb-2">Satırlar (hizmet/ürün)</h2>
+      {{ formset.management_form }}
+      {% if formset.non_form_errors %}<div class="field-error">{{ formset.non_form_errors|join:" " }}</div>{% endif %}
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead><tr><th>Hizmet/Ürün</th><th>Açıklama</th><th>Adet</th><th>Birim ₺</th>{% if formset.can_delete %}<th>Sil</th>{% endif %}</tr></thead>
+          <tbody>
+            {% for f in formset %}
+            <tr>
+              {{ f.id }}
+              <td>{{ f.item }}</td>
+              <td>{{ f.description }}</td>
+              <td class="w-20">{{ f.qty }}</td>
+              <td class="w-28">{{ f.unit_price }}</td>
+              {% if formset.can_delete %}<td class="w-10 text-center">{{ f.DELETE }}</td>{% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="help">Boş bırakılan satırlar kaydedilmez. Açıklama boşsa hizmet/ürün adı kullanılır.</p>
+    </div>
+
+    <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
+      <a href="{% url 'billing:index' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

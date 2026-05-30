@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Yeni Reçete · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="flex items-center gap-2 mb-5">
+    <a href="{% if form.initial.examination %}{% url 'medical:examination_detail' form.initial.examination %}{% elif form.initial.patient %}{% url 'patients:detail' form.initial.patient %}{% else %}{% url 'medical:examination_list' %}{% endif %}" class="btn btn-ghost px-2">‹</a>
+    <h1 class="page-title">Yeni Reçete</h1>
+  </div>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    <div class="card card-pad space-y-4">
+      {% if form.non_field_errors %}<div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+      <div class="grid md:grid-cols-3 gap-4">
+        {% include "partials/_field.html" with field=form.patient %}
+        {% include "partials/_field.html" with field=form.examination %}
+        {% include "partials/_field.html" with field=form.vet %}
+      </div>
+      {% include "partials/_field.html" with field=form.notes %}
+    </div>
+
+    <div class="card">
+      <div class="card-pad border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">İlaçlar</h2>
+      </div>
+      <div class="card-pad space-y-3">
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}<div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{{ formset.non_form_errors|join:" " }}</div>{% endif %}
+        {% for item_form in formset %}
+        <div class="grid md:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr_auto] gap-3 items-start border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
+          {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+          {% include "partials/_field.html" with field=item_form.drug_name %}
+          {% include "partials/_field.html" with field=item_form.dose %}
+          {% include "partials/_field.html" with field=item_form.frequency %}
+          {% include "partials/_field.html" with field=item_form.duration %}
+          {% include "partials/_field.html" with field=item_form.note %}
+          {% if item_form.DELETE %}<div class="pt-7">{% include "partials/_field.html" with field=item_form.DELETE %}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="flex gap-2 justify-end">
+      <a href="{% url 'medical:examination_list' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">Reçeteyi Kaydet</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

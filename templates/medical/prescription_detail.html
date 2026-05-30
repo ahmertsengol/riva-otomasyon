@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Reçete · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+    <div class="flex items-center gap-2">
+      <a href="{% if prescription.examination %}{% url 'medical:examination_detail' prescription.examination.pk %}{% else %}{% url 'patients:detail' prescription.patient.pk %}{% endif %}" class="btn btn-ghost px-2">‹</a>
+      <div>
+        <h1 class="page-title">Reçete</h1>
+        <p class="text-sm text-slate-500">{{ prescription.created_at|date:"d F Y, H:i" }}</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'medical:prescription_pdf' prescription.pk %}" target="_blank" class="btn btn-primary btn-sm">{% include "partials/_icon.html" with name="file" %}PDF</a>
+      <a href="{% url 'patients:detail' prescription.patient.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="paw" %}Hayvan</a>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card overflow-x-auto">
+      <div class="card-pad border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">İlaçlar</h2>
+      </div>
+      <table class="table">
+        <thead><tr><th>İlaç</th><th>Doz</th><th>Sıklık</th><th>Süre</th><th>Not</th></tr></thead>
+        <tbody>
+          {% for item in prescription.items.all %}
+          <tr>
+            <td class="font-medium text-slate-900">{{ item.drug_name }}</td>
+            <td>{{ item.dose|default:"—" }}</td>
+            <td>{{ item.frequency|default:"—" }}</td>
+            <td>{{ item.duration|default:"—" }}</td>
+            <td>{{ item.note|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if prescription.notes %}
+      <div class="card-pad border-t border-slate-100">
+        <h3 class="section-title mb-1">Notlar</h3>
+        <p class="text-sm text-slate-700 whitespace-pre-line">{{ prescription.notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="space-y-4">
+      <div class="card card-pad">
+        <h2 class="section-title mb-3">Hasta</h2>
+        <dl class="space-y-2 text-sm">
+          <div class="flex justify-between gap-3"><dt class="text-slate-500">Hayvan</dt><dd class="font-medium text-slate-800">{{ prescription.patient.name }}</dd></div>
+          <div class="flex justify-between gap-3"><dt class="text-slate-500">Tür</dt><dd>{{ prescription.patient.species.name }}</dd></div>
+          <div class="flex justify-between gap-3"><dt class="text-slate-500">Sahip</dt><dd>{{ prescription.patient.owner.full_name }}</dd></div>
+          <div class="flex justify-between gap-3"><dt class="text-slate-500">Telefon</dt><dd>{{ prescription.patient.owner.phone }}</dd></div>
+          <div class="flex justify-between gap-3"><dt class="text-slate-500">Hekim</dt><dd>{{ prescription.vet.display_name|default:"—" }}</dd></div>
+        </dl>
+      </div>
+      {% if prescription.examination %}
+      <div class="card card-pad">
+        <h2 class="section-title mb-2">Muayene</h2>
+        <a href="{% url 'medical:examination_detail' prescription.examination.pk %}" class="text-sm text-brand-700 hover:underline">{{ prescription.examination.created_at|date:"d.m.Y H:i" }} · {{ prescription.examination.diagnosis|default:"Muayene" }}</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

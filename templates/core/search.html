@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Arama · {{ clinic.name|default:"Riva Veteriner" }}{% endblock %}
+
+{% block content %}
+<h1 class="page-title mb-1">Arama</h1>
+{% if query %}<p class="text-sm text-slate-500 mb-4">"<span class="font-medium">{{ query }}</span>" için sonuçlar</p>{% endif %}
+
+{% if not query %}
+  <div class="card card-pad text-slate-500">Aramak için yukarıdaki kutuya telefon, sahip adı, hayvan adı veya mikroçip numarası yazın.</div>
+{% else %}
+  <div class="grid lg:grid-cols-2 gap-4">
+    <div class="card">
+      <div class="card-pad border-b border-slate-100 font-semibold text-slate-800">Sahipler ({{ results.owners|length }})</div>
+      {% for o in results.owners %}
+        <a href="{% url 'owners:detail' o.pk %}" class="flex items-center justify-between px-4 py-2.5 hover:bg-brand-50/40 border-b border-slate-50">
+          <span class="font-medium text-slate-800">{{ o.full_name }}</span>
+          <span class="text-sm text-slate-500">{{ o.phone }}</span>
+        </a>
+      {% empty %}
+        <div class="card-pad text-slate-400 text-sm">Sahip bulunamadı.</div>
+      {% endfor %}
+    </div>
+    <div class="card">
+      <div class="card-pad border-b border-slate-100 font-semibold text-slate-800">Hayvanlar ({{ results.patients|length }})</div>
+      {% for p in results.patients %}
+        <a href="{% url 'patients:detail' p.pk %}" class="flex items-center justify-between px-4 py-2.5 hover:bg-brand-50/40 border-b border-slate-50">
+          <span class="font-medium text-slate-800">{{ p.name }} <span class="text-slate-400 font-normal">· {{ p.species.name }}</span></span>
+          <span class="text-sm text-slate-500">{{ p.owner.full_name }}</span>
+        </a>
+      {% empty %}
+        <div class="card-pad text-slate-400 text-sm">Hayvan bulunamadı.</div>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Randevu Düzenle{% else %}Yeni Randevu{% endif %} · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="flex items-center gap-2 mb-5">
+    <a href="{% url 'appointments:calendar' %}" class="btn btn-ghost px-2">‹</a>
+    <h1 class="page-title">{% if form.instance.pk %}Randevu Düzenle{% else %}Yeni Randevu{% endif %}</h1>
+  </div>
+
+  <form method="post" class="card card-pad space-y-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    {% include "partials/_field.html" with field=form.patient %}
+    <div class="grid sm:grid-cols-2 gap-4">
+      {% include "partials/_field.html" with field=form.starts_at %}
+      {% include "partials/_field.html" with field=form.duration_min %}
+      {% include "partials/_field.html" with field=form.type %}
+      {% include "partials/_field.html" with field=form.status %}
+    </div>
+    {% include "partials/_field.html" with field=form.assigned_vet %}
+    {% include "partials/_field.html" with field=form.note %}
+    <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
+      <a href="{% url 'appointments:calendar' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

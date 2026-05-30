@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Aşı Kartı #{{ record.pk }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; color: #0f172a; font-size: 12px; }
+    .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #0d9488; padding-bottom: 14px; margin-bottom: 18px; }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .mark { width: 42px; height: 42px; border-radius: 10px; background: #0d9488; color: white; display: grid; place-items: center; font-weight: 700; font-size: 22px; }
+    .mark-img { width: 52px; height: 52px; border-radius: 10px; object-fit: contain; }
+    h1 { margin: 0; font-size: 20px; }
+    h2 { margin: 0 0 8px; font-size: 13px; color: #0f766e; text-transform: uppercase; letter-spacing: .04em; }
+    .muted { color: #64748b; }
+    .meta { text-align: right; line-height: 1.5; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .box { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
+    dl { margin: 0; }
+    .row { display: flex; justify-content: space-between; gap: 16px; margin: 4px 0; }
+    dt { color: #64748b; }
+    dd { margin: 0; font-weight: 600; text-align: right; }
+    .notes { margin-top: 16px; white-space: pre-line; }
+    .footer { position: fixed; bottom: 8mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; color: #94a3b8; font-size: 10px; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+    .signature { margin-top: 34px; display: flex; justify-content: flex-end; }
+    .signature-box { width: 190px; border-top: 1px solid #cbd5e1; padding-top: 8px; text-align: center; color: #475569; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      {% if clinic.logo %}<img class="mark-img" src="file://{{ clinic.logo.path }}">{% else %}<div class="mark">R</div>{% endif %}
+      <div>
+        <h1>{{ clinic.name|default:"Riva Veteriner Kliniği" }}</h1>
+        <div class="muted">{{ clinic.address }}</div>
+        <div class="muted">{{ clinic.phone }}{% if clinic.email %} · {{ clinic.email }}{% endif %}</div>
+      </div>
+    </div>
+    <div class="meta">
+      <strong>AŞI KARTI</strong><br>
+      No: #{{ record.pk }}<br>
+      Tarih: {{ record.applied_at|date:"d.m.Y" }}
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="box">
+      <h2>Hasta</h2>
+      <dl>
+        <div class="row"><dt>Hayvan</dt><dd>{{ record.patient.name }}</dd></div>
+        <div class="row"><dt>Tür</dt><dd>{{ record.patient.species.name }}</dd></div>
+        <div class="row"><dt>Irk</dt><dd>{{ record.patient.breed|default:"-" }}</dd></div>
+        <div class="row"><dt>Mikroçip</dt><dd>{{ record.patient.microchip_no|default:"-" }}</dd></div>
+      </dl>
+    </div>
+    <div class="box">
+      <h2>Sahip & Hekim</h2>
+      <dl>
+        <div class="row"><dt>Sahip</dt><dd>{{ record.patient.owner.full_name }}</dd></div>
+        <div class="row"><dt>Telefon</dt><dd>{{ record.patient.owner.phone }}</dd></div>
+        <div class="row"><dt>Hekim</dt><dd>{{ record.vet.display_name|default:"-" }}</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>Aşı Bilgisi</h2>
+    <dl>
+      <div class="row"><dt>Aşı</dt><dd>{{ record.display_name }}</dd></div>
+      <div class="row"><dt>Uygulama tarihi</dt><dd>{{ record.applied_at|date:"d.m.Y" }}</dd></div>
+      <div class="row"><dt>Sonraki tarih</dt><dd>{% if record.next_due_at %}{{ record.next_due_at|date:"d.m.Y" }}{% else %}-{% endif %}</dd></div>
+      <div class="row"><dt>Seri / Lot</dt><dd>{{ record.serial_lot|default:"-" }}</dd></div>
+      <div class="row"><dt>Son kullanma</dt><dd>{% if record.expiry_date %}{{ record.expiry_date|date:"d.m.Y" }}{% else %}-{% endif %}</dd></div>
+    </dl>
+    {% if record.note %}<div class="notes"><strong>Not:</strong><br>{{ record.note }}</div>{% endif %}
+  </div>
+
+  <div class="signature">
+    <div class="signature-box">{{ record.vet.display_name|default:"Veteriner Hekim" }}<br>Kaşe / İmza</div>
+  </div>
+
+  <div class="footer">
+    <span>Bu belge klinik içi otomasyon üzerinden oluşturulmuştur.</span>
+    <span>{{ clinic.name|default:"Riva Veteriner" }}</span>
+  </div>
+</body>
+</html>

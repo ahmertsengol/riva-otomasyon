@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Panel · {{ clinic.name|default:"Riva Veteriner" }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-5">
+  <div>
+    <h1 class="page-title">Panel</h1>
+    <p class="text-sm text-slate-500">{{ today|date:"d F Y, l" }} · Günlük operasyon özeti</p>
+  </div>
+</div>
+
+{# ---- Özet kartları ---- #}
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
+  {% include "core/_stat.html" with label="Bugünkü Randevu" value=cards.appointments_today icon="calendar" tone="brand" href="/randevular/" %}
+  {% include "core/_stat.html" with label="Bekleyen Talep" value=cards.pending_requests icon="inbox" tone="warning" href="/randevu-talepleri/" %}
+  {% include "core/_stat.html" with label="Yaklaşan Aşı" value=cards.upcoming_vaccines icon="syringe" tone="info" href="/asilar/yaklasan/" %}
+  {% include "core/_stat.html" with label="Geciken Aşı" value=cards.overdue_vaccines icon="syringe" tone="danger" href="/asilar/geciken/" %}
+  {% include "core/_stat.html" with label="Bugünkü Muayene" value=cards.exams_today icon="stethoscope" tone="neutral" %}
+  {% include "core/_stat.html" with label="Yeni Müşteri (bugün)" value=cards.new_owners icon="users" tone="neutral" %}
+  {% include "core/_stat.html" with label="Yeni Hayvan (bugün)" value=cards.new_patients icon="paw" tone="neutral" %}
+  {% include "core/_stat.html" with label="Gönderilecek Hatırlatma" value=cards.pending_messages icon="bell" tone="info" href="/hatirlatmalar/" %}
+  {% include "core/_stat.html" with label="Başarısız Mesaj" value=cards.failed_messages icon="bell" tone="danger" href="/hatirlatmalar/" %}
+  {% include "core/_stat.html" with label="Günlük Tahsilat" value=cards.todays_collection icon="wallet" tone="success" money=True %}
+</div>
+
+{# ---- Bugünkü randevular ---- #}
+<div class="card">
+  <div class="card-pad flex items-center justify-between border-b border-slate-100">
+    <h2 class="font-semibold text-slate-800">Bugünkü Randevular</h2>
+    <a href="/randevular/" class="btn btn-secondary btn-sm">Takvim</a>
+  </div>
+  {% if today_appointments %}
+  <div class="overflow-x-auto">
+    <table class="table">
+      <thead><tr>
+        <th>Saat</th><th>Hayvan</th><th>Sahip</th><th>Tür</th><th>Hekim</th><th>Durum</th>
+      </tr></thead>
+      <tbody>
+        {% for a in today_appointments %}
+        <tr>
+          <td class="font-medium text-slate-900">{{ a.starts_at|time:"H:i" }}</td>
+          <td>{{ a.patient.name }}</td>
+          <td>{{ a.owner.full_name }}</td>
+          <td>{{ a.get_type_display }}</td>
+          <td>{{ a.assigned_vet.display_name|default:"—" }}</td>
+          <td>{% include "partials/_status_badge.html" with status=a.status label=a.get_status_display %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-pad text-center text-slate-400 py-10">Bugün için randevu yok.</div>
+  {% endif %}
+</div>
+{% endblock %}

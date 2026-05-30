@@ -1,0 +1,35 @@
+{% extends "settings/settings_base.html" %}
+
+{% block settings_content %}
+<div class="grid sm:grid-cols-[1fr_18rem] gap-4 items-start">
+  <div class="card overflow-hidden">
+    <div class="card-pad border-b border-slate-100 font-semibold text-slate-800">Türler</div>
+    <table class="table">
+      <thead><tr><th>Tür</th><th>Durum</th><th class="text-right">İşlem</th></tr></thead>
+      <tbody>
+        {% for s in species %}
+        <tr>
+          <td class="font-medium text-slate-900">{{ s.name }}</td>
+          <td>{% if s.active %}<span class="badge badge-success">Aktif</span>{% else %}<span class="badge badge-neutral">Pasif</span>{% endif %}</td>
+          <td class="text-right">
+            <form method="post" action="{% url 'settings:species_toggle' s.pk %}" class="inline">{% csrf_token %}
+              <button class="btn btn-secondary btn-sm">{% if s.active %}Pasifleştir{% else %}Aktifleştir{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-center text-slate-400 py-6">Henüz tür yok.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <form method="post" class="card card-pad space-y-3">
+    {% csrf_token %}
+    <h2 class="section-title">Yeni Tür</h2>
+    {% include "partials/_field.html" with field=form.name %}
+    {% include "partials/_field.html" with field=form.active %}
+    <button type="submit" class="btn btn-primary w-full">Ekle</button>
+  </form>
+</div>
+{% endblock %}

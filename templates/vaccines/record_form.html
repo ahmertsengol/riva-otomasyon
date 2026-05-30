@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Aşı Uygula · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="flex items-center gap-2 mb-5">
+    <a href="{% if form.initial.patient %}{% url 'patients:detail' form.initial.patient %}{% else %}{% url 'vaccines:upcoming' %}{% endif %}" class="btn btn-ghost px-2">‹</a>
+    <h1 class="page-title">Aşı Uygula</h1>
+  </div>
+
+  <form method="post" class="card card-pad space-y-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="grid md:grid-cols-2 gap-4">
+      {% include "partials/_field.html" with field=form.patient %}
+      {% include "partials/_field.html" with field=form.vaccine_definition %}
+      {% include "partials/_field.html" with field=form.vaccine_name %}
+      {% include "partials/_field.html" with field=form.vet %}
+      {% include "partials/_field.html" with field=form.applied_at %}
+      {% include "partials/_field.html" with field=form.next_due_at %}
+      {% include "partials/_field.html" with field=form.serial_lot %}
+      {% include "partials/_field.html" with field=form.expiry_date %}
+    </div>
+    {% include "partials/_field.html" with field=form.note %}
+    <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
+      <a href="{% url 'vaccines:upcoming' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

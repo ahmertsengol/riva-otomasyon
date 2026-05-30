@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* Tailwind v4: şablon ve python dosyalarını sınıf taraması için kaynak göster */
+@source "../../templates/**/*.html";
+@source "../../apps/**/*.py";
+
+/* ----------------------------------------------------------------------------
+   Tasarım sistemi — Açık tema, tıbbi teal vurgu, anlamlı durum renkleri.
+   "Renkli ama gökkuşağı değil": tek güçlü marka rengi + net durum renkleri.
+---------------------------------------------------------------------------- */
+@theme {
+  /* Marka — tıbbi teal */
+  --color-brand-50:  #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+
+  /* Nötr zemin — hafif soğuk gri (uzun kullanımda göz yormaz) */
+  --color-surface:      #f8fafc;
+  --color-surface-card: #ffffff;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ----------------------------------------------------------------------------
+   Bileşen sınıfları — tablo/form/kart/rozet/buton tutarlılığı.
+---------------------------------------------------------------------------- */
+@layer components {
+  /* Butonlar */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2
+      text-sm font-medium transition-colors focus:outline-none
+      focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:opacity-50
+      disabled:cursor-not-allowed whitespace-nowrap;
+  }
+  .btn-primary { @apply bg-brand-600 text-white hover:bg-brand-700; }
+  .btn-secondary {
+    @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-50;
+  }
+  .btn-ghost { @apply text-slate-600 hover:bg-slate-100; }
+  .btn-danger { @apply bg-red-600 text-white hover:bg-red-700; }
+  .btn-sm { @apply px-2.5 py-1.5 text-xs; }
+
+  /* Kartlar / paneller */
+  .card {
+    @apply bg-white rounded-xl border border-slate-200 shadow-sm;
+  }
+  .card-pad { @apply p-4 sm:p-5; }
+
+  /* Form alanları */
+  .label { @apply block text-sm font-medium text-slate-700 mb-1; }
+  .input, .select, .textarea {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
+      text-slate-900 placeholder:text-slate-400 shadow-sm
+      focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:outline-none;
+  }
+  .field-error { @apply mt-1 text-xs text-red-600; }
+  .help { @apply mt-1 text-xs text-slate-500; }
+
+  /* Tablolar — yoğun veri için sıkı satır yüksekliği */
+  .table { @apply w-full text-sm text-left; }
+  .table thead th {
+    @apply px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500
+      border-b border-slate-200 bg-slate-50;
+  }
+  .table tbody td { @apply px-3 py-2.5 border-b border-slate-100 text-slate-700; }
+  .table tbody tr:hover { @apply bg-brand-50/40; }
+
+  /* Rozetler / durum etiketleri */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  .badge-neutral { @apply bg-slate-100 text-slate-600; }
+  .badge-success { @apply bg-emerald-100 text-emerald-700; }
+  .badge-warning { @apply bg-amber-100 text-amber-700; }
+  .badge-danger  { @apply bg-red-100 text-red-700; }
+  .badge-info    { @apply bg-sky-100 text-sky-700; }
+  .badge-brand   { @apply bg-brand-100 text-brand-700; }
+
+  /* Sol menü bağlantıları */
+  .nav-link {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium
+      text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors;
+  }
+  .nav-link-active { @apply bg-brand-50 text-brand-700 hover:bg-brand-50; }
+
+  /* Sayfa başlığı */
+  .page-title { @apply text-xl font-semibold text-slate-900; }
+  .section-title { @apply text-sm font-semibold text-slate-500 uppercase tracking-wide; }
+}

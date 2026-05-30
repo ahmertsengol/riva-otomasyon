@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Aşı Geçmişi · {{ patient.name }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; color: #0f172a; font-size: 12px; }
+    .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #0d9488; padding-bottom: 14px; margin-bottom: 18px; }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .mark { width: 42px; height: 42px; border-radius: 10px; background: #0d9488; color: white; display: grid; place-items: center; font-weight: 700; font-size: 22px; }
+    .mark-img { width: 52px; height: 52px; border-radius: 10px; object-fit: contain; }
+    h1 { margin: 0; font-size: 20px; }
+    h2 { margin: 0 0 8px; font-size: 13px; color: #0f766e; text-transform: uppercase; letter-spacing: .04em; }
+    .muted { color: #64748b; }
+    .meta { text-align: right; line-height: 1.5; }
+    .box { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+    .row { display: flex; justify-content: space-between; gap: 16px; margin: 4px 0; }
+    dt { color: #64748b; }
+    dd { margin: 0; font-weight: 600; text-align: right; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th { background: #f1f5f9; color: #475569; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 9px 8px; vertical-align: top; }
+    td:first-child { font-weight: 700; }
+    .overdue { color: #dc2626; }
+    .footer { position: fixed; bottom: 8mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; color: #94a3b8; font-size: 10px; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      {% if clinic.logo %}<img class="mark-img" src="file://{{ clinic.logo.path }}">{% else %}<div class="mark">R</div>{% endif %}
+      <div>
+        <h1>{{ clinic.name|default:"Riva Veteriner Kliniği" }}</h1>
+        <div class="muted">{{ clinic.address }}</div>
+        <div class="muted">{{ clinic.phone }}{% if clinic.email %} · {{ clinic.email }}{% endif %}</div>
+      </div>
+    </div>
+    <div class="meta">
+      <strong>AŞI GEÇMİŞİ</strong><br>
+      {{ patient.name }}<br>
+      {{ records|length }} kayıt
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="row"><dt>Hayvan</dt><dd>{{ patient.name }} · {{ patient.species.name }}{% if patient.breed %} ({{ patient.breed }}){% endif %}</dd></div>
+    <div class="row"><dt>Sahip</dt><dd>{{ patient.owner.full_name }} · {{ patient.owner.phone }}</dd></div>
+    <div class="row"><dt>Mikroçip</dt><dd>{{ patient.microchip_no|default:"-" }}</dd></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Aşı</th><th>Uygulama</th><th>Sonraki</th><th>Hekim</th><th>Seri/Lot</th><th>SKT</th></tr></thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td>{{ r.display_name }}</td>
+        <td>{{ r.applied_at|date:"d.m.Y" }}</td>
+        <td class="{% if r.is_overdue %}overdue{% endif %}">{% if r.next_due_at %}{{ r.next_due_at|date:"d.m.Y" }}{% else %}-{% endif %}</td>
+        <td>{{ r.vet.display_name|default:"-" }}</td>
+        <td>{{ r.serial_lot|default:"-" }}</td>
+        <td>{% if r.expiry_date %}{{ r.expiry_date|date:"d.m.Y" }}{% else %}-{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center; color:#94a3b8;">Kayıt yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span>Bu belge klinik içi otomasyon üzerinden oluşturulmuştur. · {{ "now"|date:"d.m.Y H:i" }}</span>
+    <span>{{ clinic.name|default:"Riva Veteriner" }}</span>
+  </div>
+</body>
+</html>

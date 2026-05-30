@@ -1,0 +1,11 @@
+.git
+.venv
+staticfiles/
+media/
+tailwindcss
+*.pyc
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.env
+.DS_Store

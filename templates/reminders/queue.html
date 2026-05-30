@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Hatırlatmalar · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <h1 class="page-title">Hatırlatmalar</h1>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'reminders:templates' %}" class="btn btn-secondary">{% include "partials/_icon.html" with name="settings" %}Şablonlar & Kurallar</a>
+    <a href="{% url 'reminders:manual_create' %}" class="btn btn-secondary">{% include "partials/_icon.html" with name="plus" %}Yeni Mesaj</a>
+    <form method="post" action="{% url 'reminders:generate' %}">{% csrf_token %}
+      <button class="btn btn-primary">{% include "partials/_icon.html" with name="bell" %}Hatırlatmaları Üret</button>
+    </form>
+  </div>
+</div>
+
+<div class="flex gap-1 mb-4 border-b border-slate-200 overflow-x-auto">
+  {% for value, label, count in status_tabs %}
+  <a href="?status={{ value }}"
+     class="px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap {% if active_status == value %}border-brand-600 text-brand-700{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
+     {{ label }} <span class="text-slate-400">({{ count }})</span>
+  </a>
+  {% endfor %}
+</div>
+
+<form method="post" action="{% url 'reminders:bulk_mark_sent' %}">
+  {% csrf_token %}
+  {% if active_status == 'pending' and messages_list %}
+  <div class="flex justify-end mb-2">
+    <button class="btn btn-secondary btn-sm">Seçilenleri gönderildi işaretle</button>
+  </div>
+  {% endif %}
+
+  <div class="space-y-2">
+    {% for m in messages_list %}
+    <div class="card card-pad flex flex-wrap items-start gap-3">
+      {% if active_status == 'pending' %}
+      <input type="checkbox" name="ids" value="{{ m.pk }}" class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600">
+      {% endif %}
+      <div class="flex-1 min-w-[14rem]">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-medium text-slate-900">{{ m.owner.full_name }}</span>
+          <span class="text-slate-400 text-sm">· {{ m.to_phone }}</span>
+          <span class="badge {% if m.kind == 'vaccine' %}badge-warning{% elif m.kind == 'appointment' %}badge-info{% else %}badge-neutral{% endif %}">{{ m.get_kind_display }}</span>
+          {% if m.patient %}<span class="text-xs text-slate-500">{{ m.patient.name }}</span>{% endif %}
+        </div>
+        <p class="text-sm text-slate-600 mt-1 whitespace-pre-line">{{ m.body }}</p>
+        <div class="text-xs text-slate-400 mt-1">
+          {% if m.sender_number %}Gönderen: {{ m.sender_number }} · {% endif %}
+          {% if m.scheduled_for %}Planlanan: {{ m.scheduled_for|date:"d.m.Y" }} · {% endif %}
+          {% if m.sent_at %}Gönderildi: {{ m.sent_at|date:"d.m.Y H:i" }}{% endif %}
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        {% if m.status == 'pending' %}
+          <a href="{{ m.wa_link }}" target="_blank" class="btn btn-primary btn-sm">{% include "partials/_icon.html" with name="bell" %}WhatsApp'ta Aç</a>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="card card-pad text-center text-slate-400 py-10">Bu durumda mesaj yok.</div>
+    {% endfor %}
+  </div>
+</form>
+
+{# Tekil aksiyonlar (bulk formun dışında, ayrı formlar) #}
+{% if messages_list %}
+<div class="mt-2 text-xs text-slate-400">
+  Not: "WhatsApp'ta Aç" mesajı yeni sekmede açar; gönderdikten sonra aşağıdaki "Gönderildi" ile işaretleyin.
+</div>
+<div class="space-y-1 mt-2">
+  {% for m in messages_list %}
+  {% if m.status == 'pending' %}
+  <div class="flex items-center gap-2 text-sm">
+    <span class="text-slate-500 flex-1 truncate">#{{ m.pk }} · {{ m.owner.full_name }}</span>
+    <form method="post" action="{% url 'reminders:mark_sent' m.pk %}">{% csrf_token %}<button class="btn btn-secondary btn-sm">Gönderildi</button></form>
+    <form method="post" action="{% url 'reminders:cancel' m.pk %}">{% csrf_token %}<button class="btn btn-ghost btn-sm text-red-600">İptal</button></form>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

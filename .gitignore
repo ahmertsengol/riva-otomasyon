@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Django
+*.log
+db.sqlite3
+/staticfiles/
+/media/
+
+# Ortam & sırlar
+.env
+.env.*
+!.env.example
+
+# Araçlar
+.ruff_cache/
+.pytest_cache/
+.DS_Store
+
+# Tailwind — derlenmiş CSS commit'lenir (klinik PC'sinde build gerekmesin);
+# sadece ~100MB'lık standalone CLI binary'si hariç tutulur.
+/tailwindcss

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Sahip Sil · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto card card-pad">
+  <h1 class="text-lg font-semibold text-slate-900 mb-2">Sahip kaydını sil</h1>
+  <p class="text-sm text-slate-600 mb-4">
+    <strong>{{ owner.full_name }}</strong> ve bağlı tüm hayvan/kayıtları silinecek. Bu işlem geri alınamaz.
+  </p>
+  <form method="post" class="flex justify-end gap-2">
+    {% csrf_token %}
+    <a href="{% url 'owners:detail' owner.pk %}" class="btn btn-secondary">Vazgeç</a>
+    <button type="submit" class="btn btn-danger">Evet, Sil</button>
+  </form>
+</div>
+{% endblock %}

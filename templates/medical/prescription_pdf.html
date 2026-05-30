@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Reçete #{{ prescription.pk }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; color: #0f172a; font-size: 12px; }
+    .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #0d9488; padding-bottom: 14px; margin-bottom: 18px; }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .mark { width: 42px; height: 42px; border-radius: 10px; background: #0d9488; color: white; display: grid; place-items: center; font-weight: 700; font-size: 22px; }
+    .mark-img { width: 52px; height: 52px; border-radius: 10px; object-fit: contain; }
+    h1 { margin: 0; font-size: 20px; }
+    h2 { margin: 0 0 8px; font-size: 13px; color: #0f766e; text-transform: uppercase; letter-spacing: .04em; }
+    .muted { color: #64748b; }
+    .meta { text-align: right; line-height: 1.5; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .box { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
+    dl { margin: 0; }
+    .row { display: flex; justify-content: space-between; gap: 16px; margin: 4px 0; }
+    dt { color: #64748b; }
+    dd { margin: 0; font-weight: 600; text-align: right; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th { background: #f1f5f9; color: #475569; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 9px 8px; vertical-align: top; }
+    td:first-child { font-weight: 700; }
+    .notes { margin-top: 16px; white-space: pre-line; }
+    .footer { position: fixed; bottom: 8mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; color: #94a3b8; font-size: 10px; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+    .signature { margin-top: 34px; display: flex; justify-content: flex-end; }
+    .signature-box { width: 190px; border-top: 1px solid #cbd5e1; padding-top: 8px; text-align: center; color: #475569; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      {% if clinic.logo %}<img class="mark-img" src="file://{{ clinic.logo.path }}">{% else %}<div class="mark">R</div>{% endif %}
+      <div>
+        <h1>{{ clinic.name|default:"Riva Veteriner Kliniği" }}</h1>
+        <div class="muted">{{ clinic.address }}</div>
+        <div class="muted">{{ clinic.phone }}{% if clinic.email %} · {{ clinic.email }}{% endif %}</div>
+      </div>
+    </div>
+    <div class="meta">
+      <strong>REÇETE</strong><br>
+      No: #{{ prescription.pk }}<br>
+      Tarih: {{ prescription.created_at|date:"d.m.Y H:i" }}
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="box">
+      <h2>Hasta</h2>
+      <dl>
+        <div class="row"><dt>Hayvan</dt><dd>{{ prescription.patient.name }}</dd></div>
+        <div class="row"><dt>Tür</dt><dd>{{ prescription.patient.species.name }}</dd></div>
+        <div class="row"><dt>Irk</dt><dd>{{ prescription.patient.breed|default:"-" }}</dd></div>
+        <div class="row"><dt>Yaş</dt><dd>{{ prescription.patient.age_display }}</dd></div>
+      </dl>
+    </div>
+    <div class="box">
+      <h2>Sahip & Hekim</h2>
+      <dl>
+        <div class="row"><dt>Sahip</dt><dd>{{ prescription.patient.owner.full_name }}</dd></div>
+        <div class="row"><dt>Telefon</dt><dd>{{ prescription.patient.owner.phone }}</dd></div>
+        <div class="row"><dt>Hekim</dt><dd>{{ prescription.vet.display_name|default:"-" }}</dd></div>
+        {% if prescription.examination %}<div class="row"><dt>Muayene</dt><dd>{{ prescription.examination.created_at|date:"d.m.Y" }}</dd></div>{% endif %}
+      </dl>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>İlaçlar</h2>
+    <table>
+      <thead><tr><th>İlaç</th><th>Doz</th><th>Sıklık</th><th>Süre</th><th>Not</th></tr></thead>
+      <tbody>
+        {% for item in prescription.items.all %}
+        <tr>
+          <td>{{ item.drug_name }}</td>
+          <td>{{ item.dose|default:"-" }}</td>
+          <td>{{ item.frequency|default:"-" }}</td>
+          <td>{{ item.duration|default:"-" }}</td>
+          <td>{{ item.note|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if prescription.notes %}<div class="notes"><strong>Notlar:</strong><br>{{ prescription.notes }}</div>{% endif %}
+  </div>
+
+  <div class="signature">
+    <div class="signature-box">{{ prescription.vet.display_name|default:"Veteriner Hekim" }}<br>Kaşe / İmza</div>
+  </div>
+
+  <div class="footer">
+    <span>Bu belge klinik içi otomasyon üzerinden oluşturulmuştur.</span>
+    <span>Riva Veteriner</span>
+  </div>
+</body>
+</html>

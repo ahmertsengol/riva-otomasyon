@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr" class="h-full bg-surface">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ clinic.name|default:"Riva Veteriner" }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/tailwind.out.css' %}">
+  <link rel="icon" href="{% static 'img/favicon.svg' %}">
+  <script defer src="{% static 'js/alpine.min.js' %}"></script>
+  <script src="{% static 'js/htmx.min.js' %}"></script>
+</head>
+<body class="h-full text-slate-800"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+{% if request.user.is_authenticated %}
+<div class="min-h-full lg:grid lg:grid-cols-[16rem_1fr]"
+     x-data="{ sidebar: false }">
+
+  {# ---------------- Sol menü ---------------- #}
+  <aside class="hidden lg:flex lg:flex-col border-r border-slate-200 bg-white">
+    {% include "partials/_sidebar.html" %}
+  </aside>
+
+  {# Mobil çekmece #}
+  <div x-show="sidebar" x-cloak class="fixed inset-0 z-40 lg:hidden">
+    <div class="absolute inset-0 bg-slate-900/40" @click="sidebar=false"></div>
+    <aside class="absolute inset-y-0 left-0 w-64 bg-white shadow-xl flex flex-col">
+      {% include "partials/_sidebar.html" %}
+    </aside>
+  </div>
+
+  {# ---------------- Ana sütun ---------------- #}
+  <div class="flex flex-col min-h-screen">
+    {% include "partials/_topbar.html" %}
+
+    <main class="flex-1 px-4 sm:px-6 py-5 max-w-[1400px] w-full mx-auto">
+      {% include "partials/_messages.html" %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% else %}
+  {# Giriş yapılmamış: çıplak içerik (login vs.) #}
+  <main class="min-h-full">
+    {% include "partials/_messages.html" %}
+    {% block auth_content %}{% endblock %}
+  </main>
+{% endif %}
+
+<style>[x-cloak]{display:none!important}</style>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

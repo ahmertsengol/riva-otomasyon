@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ owner.full_name }} · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+  <div class="flex items-center gap-2">
+    <a href="{% url 'owners:list' %}" class="btn btn-ghost px-2">‹</a>
+    <div>
+      <h1 class="page-title">{{ owner.full_name }}</h1>
+      <p class="text-sm text-slate-500">{{ owner.phone }} · {{ owner.get_contact_pref_display }}</p>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="https://wa.me/{{ owner.wa_phone }}" target="_blank" class="btn btn-secondary">{% include "partials/_icon.html" with name="bell" %}WhatsApp</a>
+    <a href="{% url 'patients:create' %}?owner={{ owner.pk }}" class="btn btn-secondary">{% include "partials/_icon.html" with name="paw" %}Yeni Hayvan</a>
+    <a href="{% url 'billing:charge_create' %}?owner={{ owner.pk }}" class="btn btn-secondary">{% include "partials/_icon.html" with name="wallet" %}Yeni İşlem</a>
+    <a href="{% url 'owners:update' owner.pk %}" class="btn btn-secondary">Düzenle</a>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-4">
+  {# Sol: bilgi #}
+  <div class="space-y-4">
+    <div class="card card-pad">
+      <h2 class="section-title mb-3">İletişim & Adres</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between gap-3"><dt class="text-slate-500">Telefon</dt><dd class="text-slate-800 font-medium">{{ owner.phone }}</dd></div>
+        {% if owner.email %}<div class="flex justify-between gap-3"><dt class="text-slate-500">E-posta</dt><dd class="text-slate-800">{{ owner.email }}</dd></div>{% endif %}
+        {% if owner.il or owner.ilce %}<div class="flex justify-between gap-3"><dt class="text-slate-500">İl / İlçe</dt><dd class="text-slate-800">{{ owner.il }}{% if owner.ilce %} / {{ owner.ilce }}{% endif %}</dd></div>{% endif %}
+        {% if owner.address %}<div><dt class="text-slate-500">Adres</dt><dd class="text-slate-800 mt-0.5">{{ owner.address }}</dd></div>{% endif %}
+        {% if owner.tc_no %}<div class="flex justify-between gap-3"><dt class="text-slate-500">T.C. No</dt><dd class="text-slate-800">{{ owner.tc_no }}</dd></div>{% endif %}
+      </dl>
+    </div>
+
+    <div class="card card-pad">
+      <h2 class="section-title mb-2">KVKK</h2>
+      {% if owner.kvkk_consent %}
+        <span class="badge badge-success">Onay var</span>
+        <span class="text-xs text-slate-400 ml-1">{{ owner.kvkk_consent_at|date:"d.m.Y" }}</span>
+      {% else %}
+        <span class="badge badge-warning">Onay yok</span>
+      {% endif %}
+      {% if owner.marketing_consent %}<span class="badge badge-info ml-1">Ticari ileti</span>{% endif %}
+    </div>
+
+    {% if owner.notes %}
+    <div class="card card-pad">
+      <h2 class="section-title mb-2">Notlar</h2>
+      <p class="text-sm text-slate-700 whitespace-pre-line">{{ owner.notes }}</p>
+    </div>
+    {% endif %}
+
+    <div class="card card-pad flex items-center justify-between">
+      <span class="section-title">Bakiye</span>
+      <span class="text-lg font-semibold {% if owner.balance > 0 %}text-red-600{% else %}text-emerald-600{% endif %}">{{ owner.balance|floatformat:0 }} ₺</span>
+    </div>
+  </div>
+
+  {# Sağ: hayvanlar + (ileride) randevu/muayene/aşı #}
+  <div class="lg:col-span-2 space-y-4">
+    <div class="card">
+      <div class="card-pad flex items-center justify-between border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">Hayvanlar ({{ patients|length }})</h2>
+        <a href="{% url 'patients:create' %}?owner={{ owner.pk }}" class="btn btn-secondary btn-sm">Yeni Hayvan</a>
+      </div>
+      {% if patients %}
+      <div class="divide-y divide-slate-50">
+        {% for p in patients %}
+        <a href="{% url 'patients:detail' p.pk %}" class="flex items-center gap-3 px-4 py-3 hover:bg-brand-50/40">
+          <span class="h-10 w-10 rounded-lg bg-slate-100 grid place-items-center overflow-hidden">
+            {% if p.photo %}<img src="{{ p.photo.url }}" class="h-full w-full object-cover">{% else %}{% include "partials/_icon.html" with name="paw" %}{% endif %}
+          </span>
+          <div class="flex-1">
+            <div class="font-medium text-slate-900">{{ p.name }}</div>
+            <div class="text-xs text-slate-500">{{ p.species.name }}{% if p.breed %} · {{ p.breed }}{% endif %} · {{ p.age_display }}</div>
+          </div>
+          {% if p.deceased %}<span class="badge badge-neutral">Vefat</span>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-8">Bu sahibe bağlı hayvan yok.</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-pad flex items-center justify-between border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">Randevular ({{ appointments|length }})</h2>
+      </div>
+      {% if appointments %}
+      <div class="divide-y divide-slate-50">
+        {% for a in appointments %}
+        <a href="{% url 'appointments:detail' a.pk %}" class="block px-4 py-3 hover:bg-brand-50/40">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-medium text-slate-900">{{ a.starts_at|date:"d F Y, H:i" }}</div>
+              <div class="text-xs text-slate-500">
+                {{ a.patient.name }} · {{ a.get_type_display }}
+                {% if a.assigned_vet %} · {{ a.assigned_vet.display_name }}{% endif %}
+              </div>
+            </div>
+            {% include "partials/_status_badge.html" with status=a.status label=a.get_status_display %}
+          </div>
+          {% if a.note %}<p class="text-xs text-slate-500 mt-2 line-clamp-2">{{ a.note }}</p>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-8">Bu sahibe ait randevu yok.</div>
+      {% endif %}
+    </div>
+
+    {# İşlemler / Borç #}
+    <div class="card">
+      <div class="card-pad flex items-center justify-between border-b border-slate-100">
+        <h2 class="font-semibold text-slate-800">İşlemler / Borç</h2>
+        <a href="{% url 'billing:charge_create' %}?owner={{ owner.pk }}" class="btn btn-secondary btn-sm">Yeni İşlem</a>
+      </div>
+      {% if charges %}
+      <table class="table">
+        <thead><tr><th>Tarih</th><th>Hayvan</th><th>Durum</th><th class="text-right">Tutar</th></tr></thead>
+        <tbody>
+          {% for c in charges %}
+          <tr class="cursor-pointer" onclick="window.location='{% url 'billing:charge_detail' c.pk %}'">
+            <td class="text-slate-500">{{ c.date|date:"d.m.Y" }}</td>
+            <td>{{ c.patient.name|default:"—" }}</td>
+            <td>{% include "billing/_charge_status.html" with charge=c %}</td>
+            <td class="text-right font-medium">{{ c.total|floatformat:0 }} ₺</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-8">İşlem kaydı yok.</div>
+      {% endif %}
+    </div>
+
+    {# İletişim Geçmişi #}
+    <div class="card">
+      <div class="card-pad border-b border-slate-100 font-semibold text-slate-800">İletişim Geçmişi</div>
+      {% if messages_log %}
+      <div class="divide-y divide-slate-50">
+        {% for m in messages_log %}
+        <div class="px-4 py-2.5 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-sm text-slate-700 truncate">{{ m.body }}</div>
+            <div class="text-xs text-slate-400">{{ m.get_kind_display }} · {{ m.created_at|date:"d.m.Y H:i" }}</div>
+          </div>
+          <span class="badge {% if m.status == 'sent' %}badge-success{% elif m.status == 'failed' %}badge-danger{% elif m.status == 'cancelled' %}badge-neutral{% else %}badge-warning{% endif %}">{{ m.get_status_display }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-pad text-center text-slate-400 py-8">Gönderim kaydı yok.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Hayvanlar · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <h1 class="page-title">Hayvanlar</h1>
+  <a href="{% url 'patients:create' %}" class="btn btn-primary">
+    {% include "partials/_icon.html" with name="plus" %}Yeni Hayvan
+  </a>
+</div>
+
+<form method="get" class="mb-4 max-w-md">
+  <div class="relative">
+    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{% include "partials/_icon.html" with name="search" %}</span>
+    <input type="search" name="q" value="{{ q }}" placeholder="Hayvan adı, mikroçip, sahip…" class="input pl-9">
+  </div>
+</form>
+
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr>
+      <th>Hayvan</th><th>Tür / Irk</th><th>Sahip</th><th>Yaş</th><th>Mikroçip</th>
+    </tr></thead>
+    <tbody>
+      {% for p in patients %}
+      <tr class="cursor-pointer" onclick="window.location='{% url 'patients:detail' p.pk %}'">
+        <td class="font-medium text-slate-900">{{ p.name }}{% if p.deceased %} <span class="badge badge-neutral">Vefat</span>{% endif %}</td>
+        <td>{{ p.species.name }}{% if p.breed %} · <span class="text-slate-500">{{ p.breed }}</span>{% endif %}</td>
+        <td>{{ p.owner.full_name }}</td>
+        <td>{{ p.age_display }}</td>
+        <td class="text-slate-500">{{ p.microchip_no|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-slate-400 py-10">
+        {% if q %}"{{ q }}" için hayvan bulunamadı.{% else %}Henüz hayvan kaydı yok.{% endif %}
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "partials/_pagination.html" %}
+{% endblock %}

@@ -1,0 +1,17 @@
+{# Tek form alanı render eder. Kullanım: {% include "partials/_field.html" with field=form.first_name %} #}
+{% if field.field.widget.input_type == "checkbox" %}
+  <label class="flex items-center gap-2 text-sm text-slate-700 py-1.5">
+    {{ field }}
+    <span>{{ field.label }}</span>
+  </label>
+  {% for e in field.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+{% else %}
+  <div>
+    <label class="label" for="{{ field.id_for_label }}">
+      {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
+    </label>
+    {{ field }}
+    {% for e in field.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+    {% if field.help_text %}<div class="help">{{ field.help_text|safe }}</div>{% endif %}
+  </div>
+{% endif %}

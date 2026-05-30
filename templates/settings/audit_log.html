@@ -1,0 +1,26 @@
+{% extends "settings/settings_base.html" %}
+
+{% block settings_content %}
+<div class="card overflow-x-auto">
+  <div class="card-pad border-b border-slate-100 font-semibold text-slate-800">Denetim Kaydı (son 200)</div>
+  <table class="table">
+    <thead><tr><th>Tarih</th><th>Kullanıcı</th><th>İşlem</th><th>Kayıt</th></tr></thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td class="text-slate-500 whitespace-nowrap">{{ log.created_at|date:"d.m.Y H:i" }}</td>
+        <td>{{ log.actor.display_name|default:"—" }}</td>
+        <td>
+          {% if log.action == 'create' %}<span class="badge badge-success">Oluşturma</span>
+          {% elif log.action == 'update' %}<span class="badge badge-info">Güncelleme</span>
+          {% else %}<span class="badge badge-danger">Silme</span>{% endif %}
+        </td>
+        <td class="text-slate-700">{{ log.object_repr }} <span class="text-slate-400 text-xs">({{ log.model_label }})</span></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-center text-slate-400 py-6">Kayıt yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

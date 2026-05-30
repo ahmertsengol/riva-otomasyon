@@ -1,0 +1,11 @@
+{# Randevu durum rozeti. Kullanım: with status=a.status label=a.get_status_display #}
+{% spaceless %}
+<span class="badge
+  {% if status == 'completed' %}badge-success
+  {% elif status == 'cancelled' %}badge-danger
+  {% elif status == 'no_show' %}badge-warning
+  {% elif status == 'in_exam' %}badge-brand
+  {% elif status == 'arrived' %}badge-info
+  {% elif status == 'confirmed' %}badge-info
+  {% else %}badge-neutral{% endif %}">{{ label }}</span>
+{% endspaceless %}

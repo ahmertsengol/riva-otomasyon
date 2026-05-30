@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Hizmetler / Ürünler · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <div class="flex items-center gap-2">
+    <a href="{% url 'billing:index' %}" class="btn btn-ghost px-2">‹</a>
+    <h1 class="page-title">Hizmetler / Ürünler</h1>
+  </div>
+  <a href="{% url 'billing:service_create' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="plus" %}Yeni</a>
+</div>
+
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>Ad</th><th>Tür</th><th class="text-right">Fiyat</th><th>Durum</th><th></th></tr></thead>
+    <tbody>
+      {% for i in items %}
+      <tr>
+        <td class="font-medium text-slate-900">{{ i.name }}</td>
+        <td>{{ i.get_kind_display }}</td>
+        <td class="text-right">{{ i.default_price|floatformat:2 }} ₺</td>
+        <td>{% if i.active %}<span class="badge badge-success">Aktif</span>{% else %}<span class="badge badge-neutral">Pasif</span>{% endif %}</td>
+        <td class="text-right"><a href="{% url 'billing:service_update' i.pk %}" class="btn btn-ghost btn-sm">Düzenle</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-slate-400 py-8">Henüz hizmet/ürün yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

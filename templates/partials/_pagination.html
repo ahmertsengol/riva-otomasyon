@@ -1,0 +1,17 @@
+{# Sayfalama. page_obj ve paginator gerektirir (ListView varsayılanları). #}
+{% if is_paginated %}
+<div class="flex items-center justify-between mt-4 text-sm">
+  <span class="text-slate-500">
+    {{ page_obj.start_index }}–{{ page_obj.end_index }} / {{ paginator.count }} kayıt
+  </span>
+  <div class="flex gap-1">
+    {% if page_obj.has_previous %}
+      <a href="?{% if q %}q={{ q }}&{% endif %}page={{ page_obj.previous_page_number }}" class="btn btn-secondary btn-sm">‹ Önceki</a>
+    {% endif %}
+    <span class="btn btn-ghost btn-sm">{{ page_obj.number }} / {{ paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?{% if q %}q={{ q }}&{% endif %}page={{ page_obj.next_page_number }}" class="btn btn-secondary btn-sm">Sonraki ›</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

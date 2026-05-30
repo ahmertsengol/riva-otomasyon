@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Randevu Sil · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto card card-pad">
+  <h1 class="text-lg font-semibold text-slate-900 mb-2">Randevuyu sil</h1>
+  <p class="text-sm text-slate-600 mb-4">
+    <strong>{{ appt.patient.name }}</strong> · {{ appt.starts_at|date:"d.m.Y H:i" }} randevusu silinecek.
+    (İptal etmek istiyorsanız silmek yerine durumu "İptal" yapabilirsiniz.)
+  </p>
+  <form method="post" class="flex justify-end gap-2">
+    {% csrf_token %}
+    <a href="{% url 'appointments:detail' appt.pk %}" class="btn btn-secondary">Vazgeç</a>
+    <button type="submit" class="btn btn-danger">Evet, Sil</button>
+  </form>
+</div>
+{% endblock %}

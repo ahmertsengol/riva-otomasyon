@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Randevular · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <h1 class="page-title">Randevular</h1>
+  <div class="flex items-center gap-2">
+    <select id="vetFilter" class="select w-auto">
+      <option value="">Tüm hekimler</option>
+      {% for v in vets %}<option value="{{ v.pk }}">{{ v.display_name }}</option>{% endfor %}
+    </select>
+    <a href="{% url 'appointments:request_list' %}" class="btn btn-secondary">{% include "partials/_icon.html" with name="inbox" %}Talepler{% if pending_request_count %} <span class="badge badge-danger">{{ pending_request_count }}</span>{% endif %}</a>
+    <a href="{% url 'appointments:create' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="plus" %}Yeni Randevu</a>
+  </div>
+</div>
+
+{# Durum renk açıklaması #}
+<div class="flex flex-wrap gap-3 mb-3 text-xs text-slate-500">
+  {% for value, label in statuses %}
+  <span class="inline-flex items-center gap-1.5">
+    <span class="h-2.5 w-2.5 rounded-full" style="background: {% if value == 'requested' %}#64748b{% elif value == 'confirmed' %}#0d9488{% elif value == 'arrived' %}#0284c7{% elif value == 'in_exam' %}#7c3aed{% elif value == 'completed' %}#059669{% elif value == 'cancelled' %}#dc2626{% else %}#d97706{% endif %}"></span>{{ label }}
+  </span>
+  {% endfor %}
+</div>
+
+<div class="card card-pad">
+  <div id="calendar"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/fullcalendar.min.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const el = document.getElementById('calendar');
+  const vetFilter = document.getElementById('vetFilter');
+  const calendar = new FullCalendar.Calendar(el, {
+    initialView: 'timeGridWeek',
+    locale: 'tr',
+    firstDay: 1,
+    nowIndicator: true,
+    slotMinTime: '08:00:00',
+    slotMaxTime: '20:00:00',
+    height: 'auto',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    buttonText: { today: 'Bugün', month: 'Ay', week: 'Hafta', day: 'Gün' },
+    events: function (info, success, failure) {
+      const params = new URLSearchParams({ start: info.startStr, end: info.endStr });
+      if (vetFilter.value) params.append('vet', vetFilter.value);
+      fetch('{% url "appointments:events" %}?' + params.toString())
+        .then(r => r.json()).then(success).catch(failure);
+    },
+    eventClick: function (arg) {
+      arg.jsEvent.preventDefault();
+      if (arg.event.url) window.location = arg.event.url;
+    },
+    dateClick: function (arg) {
+      window.location = '{% url "appointments:create" %}?date=' + encodeURIComponent(arg.dateStr.slice(0,16));
+    }
+  });
+  calendar.render();
+  vetFilter.addEventListener('change', () => calendar.refetchEvents());
+});
+</script>
+{% endblock %}

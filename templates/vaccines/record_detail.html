@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Aşı Kaydı · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+    <div class="flex items-center gap-2">
+      <a href="{% url 'patients:detail' record.patient.pk %}" class="btn btn-ghost px-2">‹</a>
+      <div>
+        <h1 class="page-title">{{ record.display_name }}</h1>
+        <p class="text-sm text-slate-500">{{ record.applied_at|date:"d F Y" }}</p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'vaccines:certificate_pdf' record.pk %}" target="_blank" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="file" %}Aşı Kartı (PDF)</a>
+      <a href="{% url 'patients:detail' record.patient.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="paw" %}Hayvan</a>
+    </div>
+  </div>
+
+  <div class="card card-pad space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="font-semibold text-slate-900">{{ record.patient.name }}</div>
+        <div class="text-sm text-slate-500">{{ record.patient.species.name }} · {{ record.patient.owner.full_name }}</div>
+      </div>
+      {% if record.is_overdue %}<span class="badge badge-danger">Gecikmiş</span>{% elif record.is_upcoming %}<span class="badge badge-warning">Yaklaşıyor</span>{% else %}<span class="badge badge-success">Uygulandı</span>{% endif %}
+    </div>
+    <dl class="grid sm:grid-cols-2 gap-y-2 gap-x-4 text-sm border-t border-slate-100 pt-4">
+      <div class="flex justify-between"><dt class="text-slate-500">Aşı</dt><dd class="font-medium">{{ record.display_name }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Hekim</dt><dd>{{ record.vet.display_name|default:"—" }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Sonraki tarih</dt><dd>{{ record.next_due_at|date:"d.m.Y"|default:"—" }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Seri/Lot</dt><dd>{{ record.serial_lot|default:"—" }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">SKT</dt><dd>{{ record.expiry_date|date:"d.m.Y"|default:"—" }}</dd></div>
+      {% if record.vaccine_definition %}<div class="flex justify-between"><dt class="text-slate-500">Protokol</dt><dd>{{ record.vaccine_definition.name }}</dd></div>{% endif %}
+    </dl>
+    {% if record.note %}<div class="text-sm text-slate-700 whitespace-pre-line border-t border-slate-100 pt-4">{{ record.note }}</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Operasyon · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+    <div class="flex items-center gap-2">
+      <a href="{% url 'patients:detail' operation.patient.pk %}" class="btn btn-ghost px-2">‹</a>
+      <div>
+        <h1 class="page-title">{{ operation.type }}</h1>
+        <p class="text-sm text-slate-500">{{ operation.date|date:"d F Y, H:i" }}</p>
+      </div>
+    </div>
+    <a href="{% url 'patients:detail' operation.patient.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="paw" %}Hayvan</a>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card card-pad space-y-4">
+      {% if operation.anesthesia_info %}<div><h2 class="section-title mb-1">Anestezi</h2><p class="text-sm text-slate-800 whitespace-pre-line">{{ operation.anesthesia_info }}</p></div>{% endif %}
+      {% if operation.drugs_used %}<div><h2 class="section-title mb-1">Kullanılan İlaçlar</h2><p class="text-sm text-slate-800 whitespace-pre-line">{{ operation.drugs_used }}</p></div>{% endif %}
+      {% if operation.result %}<div><h2 class="section-title mb-1">Sonuç</h2><p class="text-sm text-slate-800 whitespace-pre-line">{{ operation.result }}</p></div>{% endif %}
+      {% if operation.post_op_instructions %}<div><h2 class="section-title mb-1">Operasyon Sonrası</h2><p class="text-sm text-slate-800 whitespace-pre-line">{{ operation.post_op_instructions }}</p></div>{% endif %}
+      {% if operation.notes %}<div><h2 class="section-title mb-1">Notlar</h2><p class="text-sm text-slate-800 whitespace-pre-line">{{ operation.notes }}</p></div>{% endif %}
+    </div>
+    <div class="card card-pad">
+      <h2 class="section-title mb-3">Özet</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between gap-3"><dt class="text-slate-500">Hayvan</dt><dd class="font-medium">{{ operation.patient.name }}</dd></div>
+        <div class="flex justify-between gap-3"><dt class="text-slate-500">Sahip</dt><dd>{{ operation.patient.owner.full_name }}</dd></div>
+        <div class="flex justify-between gap-3"><dt class="text-slate-500">Hekim</dt><dd>{{ operation.vet.display_name|default:"—" }}</dd></div>
+        <div class="flex justify-between gap-3"><dt class="text-slate-500">Kontrol</dt><dd>{{ operation.follow_up_date|date:"d.m.Y"|default:"—" }}</dd></div>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Kasa · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <h1 class="page-title">Kasa</h1>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'billing:services' %}" class="btn btn-secondary">{% include "partials/_icon.html" with name="settings" %}Hizmet/Ürün</a>
+    <a href="{% url 'billing:payment_create' %}" class="btn btn-secondary">{% include "partials/_icon.html" with name="wallet" %}Tahsilat Ekle</a>
+    <a href="{% url 'billing:charge_create' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="plus" %}Yeni İşlem</a>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+  {% include "core/_stat.html" with label="Bugünkü Tahsilat" value=summary.collection_today icon="wallet" tone="success" money=True %}
+  {% include "core/_stat.html" with label="Bugünkü Tahsilat Adedi" value=summary.payment_count icon="clock" tone="neutral" %}
+  {% include "core/_stat.html" with label="Bekleyen İşlem" value=summary.pending_charges icon="file" tone="warning" %}
+</div>
+
+<div class="grid lg:grid-cols-2 gap-4">
+  {# Borçlular #}
+  <div class="card">
+    <div class="card-pad border-b border-slate-100 font-semibold text-slate-800">Borçlu Sahipler</div>
+    <table class="table">
+      <thead><tr><th>Sahip</th><th class="text-right">Borç</th></tr></thead>
+      <tbody>
+        {% for o in debtors %}
+        <tr class="cursor-pointer" onclick="window.location='{% url 'owners:detail' o.pk %}'">
+          <td class="font-medium text-slate-900">{{ o.full_name }}</td>
+          <td class="text-right text-red-600 font-medium">{{ o.debt|floatformat:0 }} ₺</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2" class="text-center text-slate-400 py-8">Borçlu sahip yok.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Son işlemler + bugünkü yöntem kırılımı #}
+  <div class="space-y-4">
+    <div class="card">
+      <div class="card-pad border-b border-slate-100 font-semibold text-slate-800">Bugünkü Tahsilat (yöntem)</div>
+      <div class="card-pad space-y-1.5">
+        {% for row in by_method %}
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-600">{{ row.label }}</span>
+          <span class="font-medium">{{ row.total|floatformat:0 }} ₺</span>
+        </div>
+        {% empty %}
+        <div class="text-slate-400 text-sm">Bugün tahsilat yok.</div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-pad border-b border-slate-100 font-semibold text-slate-800">Son İşlemler</div>
+      <table class="table">
+        <thead><tr><th>Sahip</th><th>Tarih</th><th>Durum</th><th class="text-right">Tutar</th></tr></thead>
+        <tbody>
+          {% for c in recent_charges %}
+          <tr class="cursor-pointer" onclick="window.location='{% url 'billing:charge_detail' c.pk %}'">
+            <td>{{ c.owner.full_name }}</td>
+            <td class="text-slate-500">{{ c.date|date:"d.m.Y" }}</td>
+            <td>{% include "billing/_charge_status.html" with charge=c %}</td>
+            <td class="text-right font-medium">{{ c.total|floatformat:0 }} ₺</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-slate-400 py-8">İşlem yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

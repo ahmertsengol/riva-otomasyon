@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Giriş · {{ clinic.name|default:"Riva Veteriner" }}{% endblock %}
+
+{% block auth_content %}
+<div class="min-h-screen grid place-items-center bg-gradient-to-br from-brand-50 via-surface to-slate-100 px-4">
+  <div class="w-full max-w-sm">
+    <div class="flex flex-col items-center mb-6">
+      {% if clinic.logo %}
+        <img src="{{ clinic.logo.url }}" alt="{{ clinic.name }}" class="h-20 w-20 rounded-2xl object-contain shadow-lg shadow-slate-300/40">
+      {% else %}
+        <div class="h-14 w-14 rounded-2xl bg-brand-600 text-white grid place-items-center text-2xl font-bold shadow-lg shadow-brand-600/20">R</div>
+      {% endif %}
+      <h1 class="mt-3 text-lg font-semibold text-slate-900">{{ clinic.name|default:"Riva Veteriner Kliniği" }}</h1>
+      <p class="text-sm text-slate-500">Klinik Otomasyon Sistemi</p>
+    </div>
+
+    <div class="card card-pad">
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+            {{ form.non_field_errors|join:" " }}
+          </div>
+        {% endif %}
+        <div>
+          <label class="label" for="{{ form.username.id_for_label }}">Kullanıcı adı</label>
+          {{ form.username }}
+        </div>
+        <div>
+          <label class="label" for="{{ form.password.id_for_label }}">Şifre</label>
+          {{ form.password }}
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Giriş Yap</button>
+      </form>
+      <div class="mt-4 text-center">
+        <a href="{% url 'accounts:password_reset' %}" class="text-sm text-brand-700 hover:underline">
+          Şifremi unuttum
+        </a>
+      </div>
+    </div>
+    <p class="mt-6 text-center text-xs text-slate-400">© {{ clinic.name|default:"Riva Veteriner" }}</p>
+  </div>
+</div>
+{% endblock %}

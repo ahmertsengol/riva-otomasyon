@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Yeni Operasyon · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="flex items-center gap-2 mb-5">
+    <a href="{% if form.initial.patient %}{% url 'patients:detail' form.initial.patient %}{% else %}{% url 'medical:examination_list' %}{% endif %}" class="btn btn-ghost px-2">‹</a>
+    <h1 class="page-title">Yeni Operasyon</h1>
+  </div>
+
+  <form method="post" class="card card-pad space-y-4">
+    {% csrf_token %}
+    <div class="grid md:grid-cols-2 gap-4">
+      {% include "partials/_field.html" with field=form.patient %}
+      {% include "partials/_field.html" with field=form.date %}
+      {% include "partials/_field.html" with field=form.vet %}
+      {% include "partials/_field.html" with field=form.type %}
+    </div>
+    {% include "partials/_field.html" with field=form.anesthesia_info %}
+    {% include "partials/_field.html" with field=form.drugs_used %}
+    {% include "partials/_field.html" with field=form.result %}
+    {% include "partials/_field.html" with field=form.notes %}
+    <div class="grid md:grid-cols-[16rem_1fr] gap-4">
+      {% include "partials/_field.html" with field=form.follow_up_date %}
+      {% include "partials/_field.html" with field=form.post_op_instructions %}
+    </div>
+    <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
+      <a href="{% url 'medical:examination_list' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

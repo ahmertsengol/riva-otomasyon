@@ -1,0 +1,5 @@
+{% spaceless %}
+{% if charge.status == 'paid' %}<span class="badge badge-success">Ödendi</span>
+{% elif charge.status == 'partial' %}<span class="badge badge-warning">Kısmi</span>
+{% else %}<span class="badge badge-danger">Bekliyor</span>{% endif %}
+{% endspaceless %}
