@@ -11,6 +11,7 @@
     </div>
   </div>
   <div class="flex flex-wrap gap-2">
+    <a href="{% url 'reminders:manual_create' %}?owner={{ owner.pk }}" class="btn btn-secondary">{% include "partials/_icon.html" with name="bell" %}Mesaj</a>
     <a href="https://wa.me/{{ owner.wa_phone }}" target="_blank" class="btn btn-secondary">{% include "partials/_icon.html" with name="bell" %}WhatsApp</a>
     <a href="{% url 'patients:create' %}?owner={{ owner.pk }}" class="btn btn-secondary">{% include "partials/_icon.html" with name="paw" %}Yeni Hayvan</a>
     <a href="{% url 'billing:charge_create' %}?owner={{ owner.pk }}" class="btn btn-secondary">{% include "partials/_icon.html" with name="wallet" %}Yeni İşlem</a>

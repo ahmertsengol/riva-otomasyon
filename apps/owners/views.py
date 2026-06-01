@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Q
+from django.db.models import Count, DecimalField, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
@@ -17,9 +18,27 @@ class OwnerListView(LoginRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        qs = Owner.objects.annotate(pet_count=Count("patients")).order_by(
-            "first_name", "last_name"
-        )
+        # Bakiye = Σ işlem − Σ tahsilat (Subquery ile; property başına N+1 yerine tek sorgu)
+        dec = DecimalField(max_digits=12, decimal_places=2)
+        qs = Owner.objects.annotate(pet_count=Count("patients", distinct=True))
+        try:
+            from apps.billing.models import Charge, Payment
+
+            charged = (
+                Charge.objects.filter(owner=OuterRef("pk")).values("owner")
+                .annotate(s=Sum("total")).values("s")
+            )
+            paid = (
+                Payment.objects.filter(charge__owner=OuterRef("pk")).values("charge__owner")
+                .annotate(s=Sum("amount")).values("s")
+            )
+            qs = qs.annotate(
+                balance_amount=Coalesce(Subquery(charged, output_field=dec), Value(0), output_field=dec)
+                - Coalesce(Subquery(paid, output_field=dec), Value(0), output_field=dec)
+            )
+        except Exception:
+            qs = qs.annotate(balance_amount=Value(0, output_field=dec))
+        qs = qs.order_by("first_name", "last_name")
         q = (self.request.GET.get("q") or "").strip()
         if q:
             qs = qs.filter(

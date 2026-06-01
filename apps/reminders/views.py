@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -14,7 +15,20 @@ from apps.core.models import ClinicSettings
 from .forms import ManualMessageForm, MessageTemplateForm, ReminderRuleForm
 from .models import MessageTemplate, OutboundMessage, ReminderRule
 from .providers import get_provider
-from .services import generate_reminders
+from .services import generate_reminders, get_template, render_template
+
+
+@login_required
+def render_template_view(request):
+    """Seçilen şablonu, sahip/hayvan bağlamıyla doldurup düz metin döner (form JS için)."""
+    from apps.owners.models import Owner
+    from apps.patients.models import Patient
+
+    tpl = MessageTemplate.objects.filter(pk=request.GET.get("template")).first()
+    owner = Owner.objects.filter(pk=request.GET.get("owner")).first()
+    patient = Patient.objects.filter(pk=request.GET.get("patient")).first()
+    text = render_template(tpl, owner, patient) if tpl else ""
+    return HttpResponse(text, content_type="text/plain; charset=utf-8")
 
 
 @login_required
@@ -85,11 +99,32 @@ class ManualMessageCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("reminders:queue")
 
     def get_initial(self):
+        from apps.owners.models import Owner
+        from apps.patients.models import Patient
+
         initial = super().get_initial()
+        owner = patient = None
         if owner_id := self.request.GET.get("owner"):
             initial["owner"] = owner_id
+            owner = Owner.objects.filter(pk=owner_id).first()
         if patient_id := self.request.GET.get("patient"):
             initial["patient"] = patient_id
+            patient = Patient.objects.filter(pk=patient_id).first()
+            if patient and not owner:
+                owner = patient.owner
+                initial["owner"] = owner.pk
+        # Bağlamdan gelen olay (randevu/aşı vb.) → hazır şablonu seç ve gövdeyi doldur
+        if key := self.request.GET.get("template_key"):
+            tpl = get_template(key)
+            if tpl:
+                initial["template"] = tpl.pk
+                initial["body"] = render_template(
+                    tpl, owner, patient,
+                    date=self.request.GET.get("date", ""),
+                    time=self.request.GET.get("time", ""),
+                    vaccine=self.request.GET.get("vaccine", ""),
+                    amount=self.request.GET.get("amount", ""),
+                )
         return initial
 
     def get_context_data(self, **kwargs):

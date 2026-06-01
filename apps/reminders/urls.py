@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.queue, name="queue"),
     path("uret/", views.run_generate, name="generate"),
     path("yeni/", views.ManualMessageCreateView.as_view(), name="manual_create"),
+    path("sablon-render/", views.render_template_view, name="render_template"),
     path("toplu-gonderildi/", views.bulk_mark_sent, name="bulk_mark_sent"),
     path("<int:pk>/gonderildi/", views.mark_sent, name="mark_sent"),
     path("<int:pk>/iptal/", views.cancel, name="cancel"),

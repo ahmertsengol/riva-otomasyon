@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.contrib.auth import logout
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
 
 from apps.accounts.forms import (
+    ChangePasswordForm,
     LoginForm,
     NewPasswordForm,
     OTPVerifyForm,
@@ -32,6 +35,16 @@ def logout_view(request):
     logout(request)
     messages.info(request, "Çıkış yapıldı.")
     return redirect("accounts:login")
+
+
+class RivaPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    template_name = "accounts/password_change.html"
+    form_class = ChangePasswordForm
+    success_url = reverse_lazy("settings:index")
+
+    def form_valid(self, form):
+        messages.success(self.request, "Şifreniz güncellendi.")
+        return super().form_valid(form)
 
 
 def password_reset_request(request):

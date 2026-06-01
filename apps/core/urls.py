@@ -7,4 +7,6 @@ app_name = "core"
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("ara/", views.search, name="search"),
+    path("manifest.webmanifest", views.manifest, name="manifest"),
+    path("sw.js", views.service_worker, name="service_worker"),
 ]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, SetPasswordForm
 
 User = get_user_model()
 
@@ -64,4 +64,13 @@ class NewPasswordForm(SetPasswordForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name in ("new_password1", "new_password2"):
+            self.fields[name].widget.attrs.update({"class": "input"})
+
+
+class ChangePasswordForm(PasswordChangeForm):
+    """Giriş yapmış kullanıcının kendi şifresini değiştirmesi."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("old_password", "new_password1", "new_password2"):
             self.fields[name].widget.attrs.update({"class": "input"})

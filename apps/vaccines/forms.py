@@ -15,6 +15,8 @@ class VaccineDefinitionForm(StyledFormMixin, forms.ModelForm):
             "name",
             "species",
             "first_dose_age_text",
+            "series_doses",
+            "series_interval_days",
             "repeat_interval_days",
             "reminder_offset_days",
             "description",
@@ -24,6 +26,12 @@ class VaccineDefinitionForm(StyledFormMixin, forms.ModelForm):
 
 
 class VaccineRecordForm(StyledFormMixin, forms.ModelForm):
+    create_followup = forms.BooleanField(
+        label="Sonraki doz için randevu oluştur",
+        required=False,
+        initial=True,
+    )
+
     class Meta:
         model = VaccineRecord
         fields = [
@@ -49,6 +57,13 @@ class VaccineRecordForm(StyledFormMixin, forms.ModelForm):
         self.fields["patient"].queryset = (
             self.fields["patient"].queryset.select_related("owner", "species").order_by("name")
         )
+        # Hayvan değişince protokolleri türe göre filtrele (HTMX)
+        self.fields["patient"].widget.attrs.update({
+            "hx-get": "/asilar/protokol-secenekleri/",
+            "hx-target": "#vaccine-def-field",
+            "hx-swap": "innerHTML",
+            "hx-trigger": "change",
+        })
         self.fields["vaccine_definition"].queryset = VaccineDefinition.objects.filter(
             active=True
         ).select_related("species")

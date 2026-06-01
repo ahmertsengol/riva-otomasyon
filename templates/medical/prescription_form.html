@@ -14,7 +14,13 @@
       {% if form.non_field_errors %}<div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
       <div class="grid md:grid-cols-3 gap-4">
         {% include "partials/_field.html" with field=form.patient %}
-        {% include "partials/_field.html" with field=form.examination %}
+        <div>
+          <label class="label" for="id_examination">Muayene</label>
+          <div id="examination-field">
+            {% include "medical/_examination_select.html" with examinations=init_examinations selected=init_exam_selected %}
+          </div>
+          {% for e in form.examination.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+        </div>
         {% include "partials/_field.html" with field=form.vet %}
       </div>
       {% include "partials/_field.html" with field=form.notes %}

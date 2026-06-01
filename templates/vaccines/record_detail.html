@@ -12,6 +12,7 @@
       </div>
     </div>
     <div class="flex gap-2">
+      <a href="{% url 'reminders:manual_create' %}?owner={{ record.patient.owner.pk }}&patient={{ record.patient.pk }}&template_key={% if record.is_overdue %}asi-geciken{% else %}asi-yaklasan{% endif %}&vaccine={{ record.display_name|urlencode }}{% if record.next_due_at %}&date={{ record.next_due_at|date:'d.m.Y' }}{% endif %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="bell" %}Hatırlatma</a>
       <a href="{% url 'vaccines:certificate_pdf' record.pk %}" target="_blank" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="file" %}Aşı Kartı (PDF)</a>
       <a href="{% url 'patients:detail' record.patient.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="paw" %}Hayvan</a>
     </div>

@@ -1,0 +1,7 @@
+{# Hayvanın türüne göre filtrelenmiş aşı protokolü seçimi (HTMX). #}
+<select name="vaccine_definition" id="id_vaccine_definition" class="select">
+  <option value="">— Protokol seç (opsiyonel) —</option>
+  {% for d in definitions %}
+  <option value="{{ d.pk }}" {% if selected == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.name }} ({{ d.species.name }})</option>
+  {% endfor %}
+</select>

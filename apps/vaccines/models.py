@@ -19,7 +19,18 @@ class VaccineDefinition(BaseModel):
         "patients.Species", on_delete=models.PROTECT, related_name="vaccine_definitions", verbose_name="tür"
     )
     first_dose_age_text = models.CharField("ilk doz yaşı", max_length=120, blank=True)
-    repeat_interval_days = models.PositiveIntegerField("tekrar aralığı (gün)", null=True, blank=True)
+    repeat_interval_days = models.PositiveIntegerField(
+        "tekrar aralığı (gün)", null=True, blank=True,
+        help_text="Birincil seri tamamlandıktan sonraki rapel aralığı (ör. yıllık = 365).",
+    )
+    series_doses = models.PositiveSmallIntegerField(
+        "birincil seri doz sayısı", default=1,
+        help_text="Örn. yavru karma için 2-3. 1 ise tek doz + rapel.",
+    )
+    series_interval_days = models.PositiveIntegerField(
+        "seri doz aralığı (gün)", null=True, blank=True,
+        help_text="Birincil serideki dozlar arası gün (ör. 21). Boşsa tekrar aralığı kullanılır.",
+    )
     reminder_offset_days = models.PositiveIntegerField("hatırlatma öncesi (gün)", default=7)
     description = models.TextField("açıklama", blank=True)
     active = models.BooleanField("aktif", default=True)
@@ -93,12 +104,26 @@ class VaccineRecord(BaseModel):
 
     def save(self, *args, **kwargs):
         if self.vaccine_definition_id:
-            self.vaccine_name = self.vaccine_definition.name
-            if self.next_due_at is None and self.vaccine_definition.repeat_interval_days:
-                self.next_due_at = self.applied_at + timedelta(
-                    days=self.vaccine_definition.repeat_interval_days
-                )
+            definition = self.vaccine_definition
+            self.vaccine_name = definition.name
+            if self.next_due_at is None:
+                self.next_due_at = self._compute_next_due(definition)
         super().save(*args, **kwargs)
+
+    def _compute_next_due(self, definition):
+        """Birincil seri devam ediyorsa seri aralığı, bittiyse rapel aralığı."""
+        prior = VaccineRecord.objects.filter(
+            patient_id=self.patient_id, vaccine_definition_id=definition.pk
+        )
+        if self.pk:
+            prior = prior.exclude(pk=self.pk)
+        dose_number = prior.filter(applied_at__lte=self.applied_at).count() + 1
+        in_primary_series = dose_number < (definition.series_doses or 1)
+        if in_primary_series and definition.series_interval_days:
+            return self.applied_at + timedelta(days=definition.series_interval_days)
+        if definition.repeat_interval_days:
+            return self.applied_at + timedelta(days=definition.repeat_interval_days)
+        return None
 
     def get_absolute_url(self) -> str:
         return reverse("vaccines:record_detail", args=[self.pk])

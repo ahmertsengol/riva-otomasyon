@@ -28,8 +28,8 @@
         <td>{{ owner.phone }}</td>
         <td><span class="badge badge-neutral">{{ owner.pet_count }}</span></td>
         <td class="text-slate-500">{{ owner.get_contact_pref_display }}</td>
-        <td class="text-right {% if owner.balance > 0 %}text-red-600 font-medium{% else %}text-slate-400{% endif %}">
-          {{ owner.balance|floatformat:0 }} ₺
+        <td class="text-right {% if owner.balance_amount > 0 %}text-red-600 font-medium{% else %}text-slate-400{% endif %}">
+          {{ owner.balance_amount|floatformat:0 }} ₺
         </td>
       </tr>
       {% empty %}

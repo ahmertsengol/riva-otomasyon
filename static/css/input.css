@@ -91,6 +91,25 @@
   }
   .nav-link-active { @apply bg-brand-50 text-brand-700 hover:bg-brand-50; }
 
+  /* İkon butonu (üst bar zili vb.) */
+  .icon-btn {
+    @apply relative inline-grid place-items-center h-9 w-9 rounded-lg text-slate-500
+      hover:bg-slate-100 hover:text-slate-700 transition-colors;
+  }
+
+  /* Bildirim rozeti — ikonun sağ üst köşesinde küçük sayaç */
+  .notif-badge {
+    @apply absolute grid place-items-center rounded-full bg-red-500 text-white font-semibold;
+    top: -2px;
+    right: -2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 1;
+    box-shadow: 0 0 0 2px #fff;
+  }
+
   /* Sayfa başlığı */
   .page-title { @apply text-xl font-semibold text-slate-900; }
   .section-title { @apply text-sm font-semibold text-slate-500 uppercase tracking-wide; }

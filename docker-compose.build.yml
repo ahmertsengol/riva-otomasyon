@@ -19,15 +19,28 @@ services:
   web:
     build: .
     environment:
-      DJANGO_SETTINGS_MODULE: riva.settings.dev
-      DEBUG: "True"
-      SECRET_KEY: "demo-secret-key-degistir-prod-icin"
+      DJANGO_SETTINGS_MODULE: riva.settings.clinic
+      SECRET_KEY: "yerel-derleme-anahtari"
       DATABASE_URL: "postgres://riva:riva@db:5432/riva"
       DB_HOST: db
+      SEED_DEMO: "1"        # yerel derlemede sahte demo verisi de yüklensin
     ports:
       - "8000:8000"
     volumes:
       - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  scheduler:
+    build: .
+    entrypoint: ["python", "manage.py", "run_scheduler"]
+    environment:
+      DJANGO_SETTINGS_MODULE: riva.settings.clinic
+      SECRET_KEY: "yerel-derleme-anahtari"
+      DATABASE_URL: "postgres://riva:riva@db:5432/riva"
+      REMINDER_INTERVAL_SECONDS: "3600"
     depends_on:
       db:
         condition: service_healthy

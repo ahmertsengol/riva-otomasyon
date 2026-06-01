@@ -79,6 +79,12 @@ class PrescriptionForm(StyledFormMixin, forms.ModelForm):
         self.fields["patient"].queryset = (
             self.fields["patient"].queryset.select_related("owner", "species").order_by("name")
         )
+        self.fields["patient"].widget.attrs.update({
+            "hx-get": "/muayene-secenekleri/",
+            "hx-target": "#examination-field",
+            "hx-swap": "innerHTML",
+            "hx-trigger": "change",
+        })
         self.fields["examination"].queryset = (
             self.fields["examination"]
             .queryset.select_related("patient", "vet")
@@ -174,6 +180,12 @@ class LabResultForm(StyledFormMixin, forms.ModelForm):
         self.fields["patient"].queryset = (
             self.fields["patient"].queryset.select_related("owner", "species").order_by("name")
         )
+        self.fields["patient"].widget.attrs.update({
+            "hx-get": "/muayene-secenekleri/",
+            "hx-target": "#examination-field",
+            "hx-swap": "innerHTML",
+            "hx-trigger": "change",
+        })
         self.fields["examination"].queryset = (
             self.fields["examination"]
             .queryset.select_related("patient", "vet")

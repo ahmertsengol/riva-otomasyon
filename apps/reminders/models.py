@@ -34,6 +34,8 @@ class MessageTemplate(BaseModel):
     class Type(models.TextChoices):
         APPOINTMENT = "appointment", "Randevu"
         VACCINE = "vaccine", "Aşı"
+        CONTROL = "control", "Kontrol"
+        PAYMENT = "payment", "Tahsilat / Borç"
         GENERAL = "general", "Genel"
 
     key = models.SlugField("anahtar", max_length=60, unique=True)
@@ -43,7 +45,10 @@ class MessageTemplate(BaseModel):
     type = models.CharField("tip", max_length=20, choices=Type.choices, default=Type.APPOINTMENT)
     body = models.TextField(
         "metin",
-        help_text="Yer tutucular: {{owner_name}}, {{pet_name}}, {{date}}, {{time}}, {{vaccine}}, {{clinic}}",
+        help_text=(
+            "Yer tutucular: {{owner_name}}, {{pet_name}}, {{species}}, {{date}}, {{time}}, "
+            "{{vaccine}}, {{amount}}, {{clinic}}, {{phone}}"
+        ),
     )
     active = models.BooleanField("aktif", default=True)
 

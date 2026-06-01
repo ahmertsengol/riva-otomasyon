@@ -9,6 +9,7 @@
       <h1 class="page-title">Randevu</h1>
     </div>
     <div class="flex gap-2">
+      <a href="{% url 'reminders:manual_create' %}?owner={{ appt.owner.pk }}&patient={{ appt.patient.pk }}&template_key=randevu-hatirlatma&date={{ appt.starts_at|date:'d.m.Y' }}&time={{ appt.starts_at|date:'H:i' }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="bell" %}Hatırlatma</a>
       <a href="{% url 'appointments:update' appt.pk %}" class="btn btn-secondary btn-sm">Düzenle</a>
       <a href="{% url 'medical:examination_create' %}?patient={{ appt.patient.pk }}&appointment={{ appt.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="stethoscope" %}Muayene</a>
       <a href="{% url 'appointments:delete' appt.pk %}" class="btn btn-ghost btn-sm text-red-600">Sil</a>

@@ -49,6 +49,10 @@ class Appointment(BaseModel):
         verbose_name="atanan hekim",
     )
     note = models.TextField("not", blank=True)
+    reminder_enabled = models.BooleanField(
+        "hatırlatma oluştur", default=True,
+        help_text="Kapalıysa bu randevu için otomatik hatırlatma üretilmez.",
+    )
 
     class Meta:
         verbose_name = "Randevu"

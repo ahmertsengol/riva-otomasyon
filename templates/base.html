@@ -7,6 +7,12 @@
   <title>{% block title %}{{ clinic.name|default:"Riva Veteriner" }}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/tailwind.out.css' %}">
   <link rel="icon" href="{% static 'img/favicon.svg' %}">
+  {# PWA — Chrome'da "uygulama olarak yükle" #}
+  <link rel="manifest" href="{% url 'core:manifest' %}">
+  <meta name="theme-color" content="#0d9488">
+  <link rel="apple-touch-icon" href="{% static 'img/icon-192.png' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Riva Vet">
   <script defer src="{% static 'js/alpine.min.js' %}"></script>
   <script src="{% static 'js/htmx.min.js' %}"></script>
 </head>
@@ -50,5 +56,12 @@
 
 <style>[x-cloak]{display:none!important}</style>
 {% block extra_js %}{% endblock %}
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('{% url "core:service_worker" %}').catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>

@@ -112,11 +112,21 @@ class PrescriptionCreateView(LoginRequiredMixin, View):
             initial.setdefault("vet", user.pk)
         return initial
 
+    def _exam_ctx(self, patient_id, selected=""):
+        exams = (
+            Examination.objects.filter(patient_id=patient_id).select_related("vet").order_by("-created_at")
+            if patient_id
+            else Examination.objects.none()
+        )
+        return {"init_examinations": exams, "init_exam_selected": str(selected or "")}
+
     def get(self, request):
         prescription = Prescription()
-        form = PrescriptionForm(initial=self.get_initial(), instance=prescription)
+        initial = self.get_initial()
+        form = PrescriptionForm(initial=initial, instance=prescription)
         formset = PrescriptionItemFormSet(instance=prescription)
-        return render(request, self.template_name, {"form": form, "formset": formset})
+        ctx = {"form": form, "formset": formset, **self._exam_ctx(initial.get("patient"), initial.get("examination", ""))}
+        return render(request, self.template_name, ctx)
 
     def post(self, request):
         prescription = Prescription()
@@ -131,7 +141,8 @@ class PrescriptionCreateView(LoginRequiredMixin, View):
             formset.save()
             messages.success(request, "Reçete oluşturuldu.")
             return redirect(prescription)
-        return render(request, self.template_name, {"form": form, "formset": formset})
+        ctx = {"form": form, "formset": formset, **self._exam_ctx(request.POST.get("patient"), request.POST.get("examination", ""))}
+        return render(request, self.template_name, ctx)
 
 
 class PrescriptionDetailView(LoginRequiredMixin, DetailView):
@@ -166,12 +177,40 @@ def prescription_pdf(request, pk):
     return response
 
 
+@login_required
+def examination_options(request):
+    """Seçilen hayvanın muayenelerini döner (HTMX ile reçete/lab formlarında filtre)."""
+    patient_id = request.GET.get("patient")
+    selected = request.GET.get("examination") or request.GET.get("selected") or ""
+    exams = (
+        Examination.objects.filter(patient_id=patient_id).select_related("vet").order_by("-created_at")
+        if patient_id
+        else Examination.objects.none()
+    )
+    return render(
+        request,
+        "medical/_examination_select.html",
+        {"examinations": exams, "selected": str(selected)},
+    )
+
+
 class PatientInitialMixin:
     def get_initial(self):
         initial = super().get_initial()
         if patient_id := self.request.GET.get("patient"):
             initial["patient"] = patient_id
         return initial
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        patient_id = self.request.GET.get("patient")
+        ctx["init_examinations"] = (
+            Examination.objects.filter(patient_id=patient_id).select_related("vet").order_by("-created_at")
+            if patient_id
+            else Examination.objects.none()
+        )
+        ctx["init_exam_selected"] = self.request.GET.get("examination", "")
+        return ctx
 
     def assign_current_vet(self, form):
         if hasattr(form.instance, "vet_id") and not form.instance.vet_id:

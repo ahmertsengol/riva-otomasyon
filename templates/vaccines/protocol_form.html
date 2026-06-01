@@ -14,10 +14,13 @@
       {% include "partials/_field.html" with field=form.name %}
       {% include "partials/_field.html" with field=form.species %}
       {% include "partials/_field.html" with field=form.first_dose_age_text %}
+      {% include "partials/_field.html" with field=form.series_doses %}
+      {% include "partials/_field.html" with field=form.series_interval_days %}
       {% include "partials/_field.html" with field=form.repeat_interval_days %}
       {% include "partials/_field.html" with field=form.reminder_offset_days %}
       {% include "partials/_field.html" with field=form.active %}
     </div>
+    <p class="help -mt-1">Örnek: yavru karma için <strong>seri doz = 2</strong>, <strong>seri aralığı = 21</strong> gün, <strong>tekrar = 365</strong> (seri bitince yıllık rapel).</p>
     {% include "partials/_field.html" with field=form.description %}
     <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
       <a href="{% url 'vaccines:protocols' %}" class="btn btn-secondary">İptal</a>

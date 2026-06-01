@@ -18,12 +18,34 @@
       </div>
       {% for e in form.patient.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
     </div>
+    {% include "partials/_field.html" with field=form.template %}
     {% include "partials/_field.html" with field=form.body %}
-    <p class="help">Mesaj kuyruğa "Bekliyor" olarak eklenir; kuyruktan WhatsApp ile elle gönderilir.</p>
+    <p class="help">Şablon seçince mesaj otomatik dolar; istediğin gibi düzenleyebilirsin. Kuyruğa "Bekliyor" olarak eklenir; WhatsApp ile elle gönderilir.</p>
     <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
       <a href="{% url 'reminders:queue' %}" class="btn btn-secondary">İptal</a>
       <button type="submit" class="btn btn-primary">Kuyruğa Ekle</button>
     </div>
   </form>
 </div>
+
+<script>
+(function () {
+  const tpl = document.getElementById('id_template');
+  const body = document.getElementById('id_body');
+  const owner = document.getElementById('id_owner');
+  if (!tpl || !body) return;
+  tpl.addEventListener('change', function () {
+    if (!tpl.value) return;
+    const patient = document.getElementById('id_patient'); // HTMX ile değişebilir, anlık oku
+    const params = new URLSearchParams({
+      template: tpl.value,
+      owner: owner ? owner.value : '',
+      patient: patient ? patient.value : '',
+    });
+    fetch('{% url "reminders:render_template" %}?' + params.toString())
+      .then(r => r.text())
+      .then(t => { if (t) body.value = t; });
+  });
+})();
+</script>
 {% endblock %}

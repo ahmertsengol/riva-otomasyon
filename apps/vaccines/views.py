@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -37,11 +37,54 @@ class VaccineRecordCreateView(LoginRequiredMixin, CreateView):
             initial.setdefault("vet", user.pk)
         return initial
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        defs = VaccineDefinition.objects.filter(active=True).select_related("species")
+        patient_id = self.request.GET.get("patient")
+        if patient_id:
+            patient = Patient.objects.filter(pk=patient_id).first()
+            if patient:
+                defs = defs.filter(species_id=patient.species_id)
+        ctx["init_definitions"] = defs
+        ctx["init_def_selected"] = ""
+        return ctx
+
     def form_valid(self, form):
         if not form.instance.vet_id and self.request.user.is_authenticated:
             form.instance.vet = self.request.user
+        response = super().form_valid(form)
+        if form.cleaned_data.get("create_followup"):
+            self._create_followup_appointment(self.object)
         messages.success(self.request, "Aşı kaydı oluşturuldu.")
-        return super().form_valid(form)
+        return response
+
+    def _create_followup_appointment(self, record):
+        """Sonraki doz tarihine 'planlandı' (talep) randevu oluşturur (idempotent)."""
+        if not record.next_due_at:
+            return
+        from datetime import datetime, time
+
+        from django.utils import timezone
+
+        from apps.appointments.models import Appointment
+
+        starts_at = timezone.make_aware(datetime.combine(record.next_due_at, time(10, 0)))
+        exists = Appointment.objects.filter(
+            patient=record.patient,
+            type=Appointment.Type.VACCINE,
+            starts_at__date=record.next_due_at,
+        ).exists()
+        if exists:
+            return
+        Appointment.objects.create(
+            owner=record.patient.owner,
+            patient=record.patient,
+            starts_at=starts_at,
+            type=Appointment.Type.VACCINE,
+            status=Appointment.Status.REQUESTED,
+            assigned_vet=record.vet,
+            note=f"Otomatik: {record.display_name} sonraki doz",
+        )
 
 
 class VaccineRecordDetailView(LoginRequiredMixin, DetailView):
@@ -129,6 +172,23 @@ class VaccineProtocolUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, "Aşı protokolü güncellendi.")
         return super().form_valid(form)
+
+
+@login_required
+def definition_options(request):
+    """Seçilen hayvanın türüne uygun aşı protokollerini döner (HTMX)."""
+    patient_id = request.GET.get("patient")
+    selected = request.GET.get("vaccine_definition") or request.GET.get("selected") or ""
+    definitions = VaccineDefinition.objects.filter(active=True).select_related("species")
+    if patient_id:
+        patient = Patient.objects.filter(pk=patient_id).first()
+        if patient:
+            definitions = definitions.filter(species_id=patient.species_id)
+    return render(
+        request,
+        "vaccines/_definition_select.html",
+        {"definitions": definitions, "selected": str(selected)},
+    )
 
 
 # ---------------------------------------------------------------------------

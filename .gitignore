@@ -9,6 +9,7 @@ __pycache__/
 db.sqlite3
 /staticfiles/
 /media/
+/backups/
 
 # Ortam & sırlar
 .env

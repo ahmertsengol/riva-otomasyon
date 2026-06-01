@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 def clinic(request):
-    data = {"clinic": None, "pending_request_count": 0}
+    data = {"clinic": None, "pending_request_count": 0, "due_reminder_count": 0, "action_count": 0}
     try:
         from .models import ClinicSettings
 
@@ -23,4 +23,17 @@ def clinic(request):
             ).count()
         except Exception:
             pass
+        try:
+            from django.utils import timezone
+
+            from apps.reminders.models import OutboundMessage
+
+            # Gönderilmeyi bekleyen + zamanı gelmiş (bugün/geciken) hatırlatmalar
+            data["due_reminder_count"] = OutboundMessage.objects.filter(
+                status=OutboundMessage.PENDING, scheduled_for__lte=timezone.localdate()
+            ).count()
+        except Exception:
+            pass
+    # Üst bar zili: yapılması gereken toplam aksiyon
+    data["action_count"] = data["due_reminder_count"] + data["pending_request_count"]
     return data

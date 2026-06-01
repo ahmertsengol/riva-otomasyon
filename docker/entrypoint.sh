@@ -1,5 +1,7 @@
 #!/bin/sh
-# Konteyner başlangıcı: DB'yi bekle → migrate → örnek veri → sunucuyu başlat.
+# Konteyner başlangıcı: DB'yi bekle → migrate → statikleri topla → bootstrap → gunicorn.
+# Üretim/ciddi kullanım: SAHTE veri YÜKLENMEZ (sadece bootstrap: admin + yapılandırma).
+# Demo verisi istenirse elle: docker compose exec web python manage.py seed_demo
 set -e
 
 echo "PostgreSQL bekleniyor…"
@@ -9,7 +11,13 @@ done
 echo "PostgreSQL hazır."
 
 python manage.py migrate --noinput
-python manage.py seed_demo        # idempotent: tekrar çalıştırılabilir
+python manage.py collectstatic --noinput
+python manage.py bootstrap        # idempotent: admin + klinik + protokoller + şablonlar
 
-echo "Uygulama başlıyor → http://localhost:8000  (giriş: admin / admin123)"
-exec python manage.py runserver 0.0.0.0:8000
+# İsteğe bağlı: SEED_DEMO=1 ise sahte demo verisi de yükle
+if [ "${SEED_DEMO:-0}" = "1" ]; then
+  python manage.py seed_demo
+fi
+
+echo "Uygulama başlıyor (gunicorn) → :8000"
+exec gunicorn riva.wsgi:application --bind 0.0.0.0:8000 --workers "${GUNICORN_WORKERS:-3}" --timeout 60

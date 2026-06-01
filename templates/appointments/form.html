@@ -11,7 +11,16 @@
   <form method="post" class="card card-pad space-y-4">
     {% csrf_token %}
     {% if form.non_field_errors %}<div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
-    {% include "partials/_field.html" with field=form.patient %}
+    <div class="grid sm:grid-cols-2 gap-4">
+      {% include "partials/_field.html" with field=form.owner %}
+      <div>
+        <label class="label" for="id_patient">Hayvan <span class="text-red-500">*</span></label>
+        <div id="patient-field">
+          {% include "patients/_patient_select.html" with patients=init_patients selected=init_selected has_owner=init_has_owner field="patient" %}
+        </div>
+        {% for e in form.patient.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+      </div>
+    </div>
     <div class="grid sm:grid-cols-2 gap-4">
       {% include "partials/_field.html" with field=form.starts_at %}
       {% include "partials/_field.html" with field=form.duration_min %}
@@ -20,6 +29,10 @@
     </div>
     {% include "partials/_field.html" with field=form.assigned_vet %}
     {% include "partials/_field.html" with field=form.note %}
+    <div class="rounded-lg bg-brand-50/60 border border-brand-100 px-3 py-2">
+      {% include "partials/_field.html" with field=form.reminder_enabled %}
+      <p class="help -mt-1">Açıksa, randevudan 1 gün önce sahibe gönderilmek üzere hatırlatma <strong>Bildirimler</strong>'e düşer (otomatik gönderilmez, siz onaylarsınız).</p>
+    </div>
     <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
       <a href="{% url 'appointments:calendar' %}" class="btn btn-secondary">İptal</a>
       <button type="submit" class="btn btn-primary">Kaydet</button>

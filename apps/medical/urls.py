@@ -8,6 +8,7 @@ urlpatterns = [
     path("muayeneler/", views.ExaminationListView.as_view(), name="examination_list"),
     path("muayeneler/yeni/", views.ExaminationCreateView.as_view(), name="examination_create"),
     path("muayeneler/<int:pk>/", views.ExaminationDetailView.as_view(), name="examination_detail"),
+    path("muayene-secenekleri/", views.examination_options, name="examination_options"),
     path("receteler/yeni/", views.PrescriptionCreateView.as_view(), name="prescription_create"),
     path("receteler/<int:pk>/", views.PrescriptionDetailView.as_view(), name="prescription_detail"),
     path("receteler/<int:pk>/pdf/", views.prescription_pdf, name="prescription_pdf"),

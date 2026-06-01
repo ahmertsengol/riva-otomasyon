@@ -20,6 +20,22 @@ from .forms import AppointmentForm
 from .models import Appointment, AppointmentRequest
 
 
+def _patient_filter_ctx(owner_id, selected):
+    """Randevu formunda sahip→hayvan filtresi için başlangıç hayvan listesi."""
+    from apps.patients.models import Patient
+
+    patients = (
+        Patient.objects.filter(owner_id=owner_id).select_related("species").order_by("name")
+        if owner_id
+        else Patient.objects.none()
+    )
+    return {
+        "init_patients": patients,
+        "init_selected": str(selected or ""),
+        "init_has_owner": bool(owner_id),
+    }
+
+
 @login_required
 def calendar(request):
     vets = User.objects.filter(role__in=[User.Role.VET, User.Role.ADMIN], is_active=True)
@@ -68,6 +84,13 @@ class AppointmentCreateView(LoginRequiredMixin, CreateView):
         initial = super().get_initial()
         if pid := self.request.GET.get("patient"):
             initial["patient"] = pid
+            from apps.patients.models import Patient
+
+            patient = Patient.objects.filter(pk=pid).first()
+            if patient:
+                initial["owner"] = patient.owner_id
+        if oid := self.request.GET.get("owner"):
+            initial["owner"] = oid
         if d := self.request.GET.get("date"):
             initial["starts_at"] = d
         if rid := self.request.GET.get("from_request"):
@@ -78,6 +101,11 @@ class AppointmentCreateView(LoginRequiredMixin, CreateView):
                     f"{req.pet_name} ({req.pet_species}) · {req.subject}\n{req.message}"
                 ).strip()
         return initial
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx.update(_patient_filter_ctx(ctx["form"]["owner"].value(), ctx["form"]["patient"].value()))
+        return ctx
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -105,6 +133,17 @@ class AppointmentUpdateView(LoginRequiredMixin, UpdateView):
     model = Appointment
     form_class = AppointmentForm
     template_name = "appointments/form.html"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.object and self.object.owner_id:
+            initial["owner"] = self.object.owner_id
+        return initial
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx.update(_patient_filter_ctx(ctx["form"]["owner"].value(), ctx["form"]["patient"].value()))
+        return ctx
 
     def form_valid(self, form):
         messages.success(self.request, "Randevu güncellendi.")

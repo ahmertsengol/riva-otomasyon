@@ -567,3 +567,113 @@ def test_patient_options_filtered_by_owner(auth_client, db):
     # owner verilmezse hayvan listelenmez (sadece placeholder)
     empty = auth_client.get(reverse("patients:options")).content.decode()
     assert "Tekir" not in empty and "Minnoş" not in empty
+
+
+def test_appointment_reminder_enabled_controls_generation(db, admin_user):
+    from apps.reminders.models import MessageTemplate, ReminderRule
+    from apps.reminders.services import generate_reminders
+
+    owner = Owner.objects.create(first_name="Hat", last_name="Kapalı", phone="0570",
+                                 contact_pref=Owner.ContactPref.WHATSAPP)
+    sp = Species.objects.create(name="Köpek")
+    pet = Patient.objects.create(owner=owner, name="Bek", species=sp)
+    tpl = MessageTemplate.objects.create(key="t-x", name="R", type=MessageTemplate.Type.APPOINTMENT,
+                                         body="{{pet_name}}")
+    ReminderRule.objects.create(name="1g", type=MessageTemplate.Type.APPOINTMENT, offset_days=1, template=tpl)
+    # reminder_enabled=False → üretilmemeli
+    Appointment.objects.create(owner=owner, patient=pet, starts_at=timezone.now() + timedelta(days=1),
+                               status=Appointment.Status.CONFIRMED, reminder_enabled=False)
+    assert generate_reminders()["appointment"] == 0
+    # reminder_enabled=True → üretilmeli
+    Appointment.objects.create(owner=owner, patient=pet, starts_at=timezone.now() + timedelta(days=1),
+                               status=Appointment.Status.CONFIRMED, reminder_enabled=True)
+    assert generate_reminders()["appointment"] == 1
+
+
+def test_vaccine_series_next_due_and_followup_appointment(auth_client, admin_user, db):
+    from apps.vaccines.models import VaccineDefinition, VaccineRecord
+
+    owner = Owner.objects.create(first_name="Seri", last_name="Vak", phone="0571")
+    sp = Species.objects.create(name="Köpek")
+    pet = Patient.objects.create(owner=owner, name="Çomar", species=sp)
+    d = VaccineDefinition.objects.create(name="Yavru Karma", species=sp, series_doses=2,
+                                         series_interval_days=21, repeat_interval_days=365)
+    # Doz 1 → seri aralığı (+21)
+    r1 = VaccineRecord.objects.create(patient=pet, vaccine_definition=d, applied_at=timezone.localdate())
+    assert (r1.next_due_at - timezone.localdate()).days == 21
+    # Doz 2 → seri bitti, rapel (+365)
+    r2 = VaccineRecord.objects.create(patient=pet, vaccine_definition=d,
+                                      applied_at=timezone.localdate() + timedelta(days=21))
+    assert (r2.next_due_at - (timezone.localdate() + timedelta(days=21))).days == 365
+
+    # Apply view: create_followup → planlı randevu oluşur
+    from apps.appointments.models import Appointment as Appt
+    n0 = Appt.objects.filter(patient=pet, type=Appt.Type.VACCINE).count()
+    resp = auth_client.post(reverse("vaccines:record_create"), {
+        "patient": pet.pk, "vaccine_definition": d.pk, "vaccine_name": "",
+        "applied_at": timezone.localdate().isoformat(), "next_due_at": "", "vet": admin_user.pk,
+        "serial_lot": "", "expiry_date": "", "note": "", "create_followup": "on",
+    })
+    assert resp.status_code == 302
+    assert Appt.objects.filter(patient=pet, type=Appt.Type.VACCINE).count() == n0 + 1
+
+
+def test_definition_options_filtered_by_species(auth_client, db):
+    from apps.vaccines.models import VaccineDefinition
+
+    cat = Species.objects.create(name="Kedi")
+    dog = Species.objects.create(name="Köpek")
+    o = Owner.objects.create(first_name="A", last_name="B", phone="0572")
+    cat_pet = Patient.objects.create(owner=o, name="Kedicik", species=cat)
+    VaccineDefinition.objects.create(name="Kedi Karma", species=cat)
+    VaccineDefinition.objects.create(name="Köpek Karma", species=dog)
+    body = auth_client.get(reverse("vaccines:definition_options"), {"patient": cat_pet.pk}).content.decode()
+    assert "Kedi Karma" in body and "Köpek Karma" not in body
+
+
+def test_template_render_endpoint_and_prefill(auth_client, db):
+    from apps.reminders.models import MessageTemplate
+
+    owner = Owner.objects.create(first_name="Şablon", last_name="Test", phone="0573")
+    sp = Species.objects.create(name="Kedi")
+    pet = Patient.objects.create(owner=owner, name="Boncuk", species=sp)
+    MessageTemplate.objects.create(key="tesekkur", name="Teşekkür", type=MessageTemplate.Type.GENERAL,
+                                   body="Sayın {{owner_name}}, {{pet_name}} için teşekkürler. {{clinic}}")
+    # Render endpoint: owner/patient yer tutucuları dolar
+    r = auth_client.get(reverse("reminders:render_template"),
+                        {"template": MessageTemplate.objects.get(key="tesekkur").pk,
+                         "owner": owner.pk, "patient": pet.pk})
+    text = r.content.decode()
+    assert r.status_code == 200 and "Şablon Test" in text and "Boncuk" in text
+    # Manuel form: template_key ile body önceden dolu gelir
+    m = auth_client.get(reverse("reminders:manual_create"),
+                        {"owner": owner.pk, "patient": pet.pk, "template_key": "tesekkur"})
+    assert m.status_code == 200 and "Boncuk için teşekkürler" in m.content.decode()
+
+
+def test_reminder_state_based_template_selection(db):
+    from apps.reminders.models import MessageTemplate, ReminderRule
+    from apps.reminders.services import generate_reminders
+    from apps.vaccines.models import VaccineRecord
+
+    owner = Owner.objects.create(first_name="Durum", last_name="Test", phone="0574",
+                                 contact_pref=Owner.ContactPref.WHATSAPP)
+    sp = Species.objects.create(name="Köpek")
+    pet = Patient.objects.create(owner=owner, name="Karabaş", species=sp)
+    MessageTemplate.objects.create(key="asi-yaklasan", name="Yaklaşan", type=MessageTemplate.Type.VACCINE,
+                                   body="YAKLASAN {{vaccine}}")
+    MessageTemplate.objects.create(key="asi-geciken", name="Geciken", type=MessageTemplate.Type.VACCINE,
+                                   body="GECIKEN {{vaccine}}")
+    up = VaccineRecord.objects.create(patient=pet, vaccine_name="Karma",
+                                      applied_at=timezone.localdate() - timedelta(days=358),
+                                      next_due_at=timezone.localdate() + timedelta(days=7))
+    od = VaccineRecord.objects.create(patient=pet, vaccine_name="Kuduz",
+                                      applied_at=timezone.localdate() - timedelta(days=366),
+                                      next_due_at=timezone.localdate() - timedelta(days=1))
+    ReminderRule.objects.create(name="yaklasan", type=MessageTemplate.Type.VACCINE, offset_days=7,
+                                template=MessageTemplate.objects.get(key="asi-yaklasan"))
+    ReminderRule.objects.create(name="geciken", type=MessageTemplate.Type.VACCINE, offset_days=-1,
+                                template=MessageTemplate.objects.get(key="asi-geciken"))
+    generate_reminders()
+    assert up.messages.first().body.startswith("YAKLASAN")
+    assert od.messages.first().body.startswith("GECIKEN")

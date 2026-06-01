@@ -4,14 +4,22 @@ from django import forms
 
 from apps.accounts.models import User
 from apps.core.forms import StyledFormMixin
+from apps.owners.models import Owner
 
 from .models import Appointment, AppointmentRequest
 
 
 class AppointmentForm(StyledFormMixin, forms.ModelForm):
+    # Kayda yazılmayan, sadece hayvan listesini filtrelemek için sahip seçimi
+    owner = forms.ModelChoiceField(
+        queryset=Owner.objects.order_by("first_name", "last_name"),
+        required=False,
+        label="Sahip",
+    )
+
     class Meta:
         model = Appointment
-        fields = ["patient", "starts_at", "duration_min", "type", "status", "assigned_vet", "note"]
+        fields = ["patient", "starts_at", "duration_min", "type", "status", "assigned_vet", "note", "reminder_enabled"]
         widgets = {
             "starts_at": forms.DateTimeInput(
                 attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
@@ -19,12 +27,20 @@ class AppointmentForm(StyledFormMixin, forms.ModelForm):
             "note": forms.Textarea(attrs={"rows": 2}),
         }
 
+    field_order = ["owner", "patient", "starts_at", "duration_min", "type", "status", "assigned_vet", "note", "reminder_enabled"]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["starts_at"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["patient"].queryset = (
             self.fields["patient"].queryset.select_related("owner", "species")
         )
+        self.fields["owner"].widget.attrs.update({
+            "hx-get": "/hayvanlar/secenekler/",
+            "hx-target": "#patient-field",
+            "hx-swap": "innerHTML",
+            "hx-trigger": "change",
+        })
         self.fields["assigned_vet"].queryset = User.objects.filter(
             role__in=[User.Role.VET, User.Role.ADMIN], is_active=True
         )

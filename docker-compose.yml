@@ -1,15 +1,15 @@
-# Riva Otomasyon — KLİNİK kurulumu (oto-güncellemeli).
+# Riva Otomasyon — KLİNİK kurulumu (ciddi kullanım, oto-güncellemeli).
 #   docker compose up -d
 # GHCR'daki hazır imajı çeker; her `git push` sonrası GitHub Actions yeni imaj yayınlar
-# ve buradaki Watchtower onu otomatik indirip uygulamayı günceller (build gerekmez).
-# Kaynaktan derlemek için: docker compose -f docker-compose.build.yml up -d --build
+# ve Watchtower onu otomatik indirip uygulamayı günceller. SAHTE DEMO VERİSİ YÜKLENMEZ
+# (yalnızca admin + yapılandırma). Kaynaktan derlemek: docker-compose.build.yml
 services:
   db:
     image: postgres:16
     environment:
       POSTGRES_DB: riva
       POSTGRES_USER: riva
-      POSTGRES_PASSWORD: riva
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-riva}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,11 +23,11 @@ services:
     image: ghcr.io/ahmertsengol/riva-otomasyon:latest
     pull_policy: always
     environment:
-      DJANGO_SETTINGS_MODULE: riva.settings.dev
-      DEBUG: "True"
-      SECRET_KEY: "demo-secret-key-degistir-prod-icin"
-      DATABASE_URL: "postgres://riva:riva@db:5432/riva"
+      DJANGO_SETTINGS_MODULE: riva.settings.clinic
+      SECRET_KEY: ${SECRET_KEY:-degistir-bu-anahtari-prod-icin-uzun-rastgele}
+      DATABASE_URL: "postgres://riva:${DB_PASSWORD:-riva}@db:5432/riva"
       DB_HOST: db
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
     ports:
       - "8000:8000"
     volumes:
@@ -37,8 +37,43 @@ services:
         condition: service_healthy
     restart: unless-stopped
     labels:
-      # Watchtower yalnızca bu etiketli konteyneri otomatik günceller
       com.centurylinklabs.watchtower.enable: "true"
+
+  # Hatırlatma zamanlayıcısı: yaklaşan randevu/aşıları periyodik tarar, "Bildirimler"e düşürür
+  scheduler:
+    image: ghcr.io/ahmertsengol/riva-otomasyon:latest
+    pull_policy: always
+    entrypoint: ["python", "manage.py", "run_scheduler"]
+    environment:
+      DJANGO_SETTINGS_MODULE: riva.settings.clinic
+      SECRET_KEY: ${SECRET_KEY:-degistir-bu-anahtari-prod-icin-uzun-rastgele}
+      DATABASE_URL: "postgres://riva:${DB_PASSWORD:-riva}@db:5432/riva"
+      REMINDER_INTERVAL_SECONDS: "3600"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+
+  # Günlük otomatik yedek: pg_dump → ./backups (14 günden eskileri silinir)
+  backup:
+    image: postgres:16
+    entrypoint: ["sh", "-c"]
+    command: >
+      'while true; do
+         echo "[backup] $(date) pg_dump...";
+         PGPASSWORD=${DB_PASSWORD:-riva} pg_dump -h db -U riva -d riva -Fc
+           -f /backups/riva_$(date +%F_%H%M).dump || echo "[backup] HATA";
+         find /backups -name "riva_*.dump" -mtime +14 -delete;
+         sleep 86400;
+       done'
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 
   # Oto-güncelleyici: GHCR'ı periyodik kontrol eder, yeni imaj varsa web'i yeniler
   watchtower:

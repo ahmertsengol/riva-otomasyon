@@ -1,0 +1,9 @@
+{# Hayvana göre filtrelenmiş muayene seçimi (HTMX). #}
+<select name="examination" id="id_examination" class="select">
+  <option value="">— Muayene (opsiyonel) —</option>
+  {% for ex in examinations %}
+  <option value="{{ ex.pk }}" {% if selected == ex.pk|stringformat:"s" %}selected{% endif %}>
+    {{ ex.created_at|date:"d.m.Y" }}{% if ex.diagnosis %} · {{ ex.diagnosis|truncatechars:40 }}{% endif %}
+  </option>
+  {% endfor %}
+</select>

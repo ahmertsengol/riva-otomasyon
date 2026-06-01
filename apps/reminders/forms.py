@@ -8,10 +8,19 @@ from .models import MessageTemplate, OutboundMessage, ReminderRule
 
 
 class ManualMessageForm(StyledFormMixin, forms.ModelForm):
+    template = forms.ModelChoiceField(
+        queryset=MessageTemplate.objects.filter(active=True).order_by("type", "name"),
+        required=False,
+        label="Hazır şablon",
+        help_text="Seçince mesaj otomatik dolar; sonra serbestçe düzenleyebilirsiniz.",
+    )
+
     class Meta:
         model = OutboundMessage
         fields = ["owner", "patient", "body"]
-        widgets = {"body": forms.Textarea(attrs={"rows": 4})}
+        widgets = {"body": forms.Textarea(attrs={"rows": 5})}
+
+    field_order = ["owner", "patient", "template", "body"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

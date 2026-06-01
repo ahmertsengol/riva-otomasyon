@@ -42,6 +42,14 @@
     </div>
   </div>
 
+  {# Bildirim zili — yapılması gereken aksiyonlar (gönderilecek hatırlatma + bekleyen talep) #}
+  <a href="/hatirlatmalar/" class="icon-btn" aria-label="Bildirimler" title="Gönderilecek hatırlatmalar / bekleyen talepler">
+    {% include "partials/_icon.html" with name="bell" %}
+    {% if action_count %}
+      <span class="notif-badge">{% if action_count > 9 %}9+{% else %}{{ action_count }}{% endif %}</span>
+    {% endif %}
+  </a>
+
   {# Kullanıcı menüsü #}
   <div class="relative" x-data="{ open: false }">
     <button @click="open = !open" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100">
@@ -57,6 +65,7 @@
         <div class="text-xs text-slate-400">{{ request.user.get_role_display }}</div>
       </div>
       <a href="/ayarlar/" class="nav-link">{% include "partials/_icon.html" with name="settings" %}Ayarlar</a>
+      <a href="{% url 'accounts:password_change' %}" class="nav-link">{% include "partials/_icon.html" with name="user" %}Şifre Değiştir</a>
       <form action="{% url 'accounts:logout' %}" method="post">{% csrf_token %}
         <button type="submit" class="nav-link w-full text-left text-red-600 hover:bg-red-50">
           {% include "partials/_icon.html" with name="logout" %}Çıkış Yap
