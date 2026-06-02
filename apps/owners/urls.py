@@ -6,6 +6,7 @@ app_name = "owners"
 
 urlpatterns = [
     path("", views.OwnerListView.as_view(), name="list"),
+    path("secenekler/", views.owner_options, name="options"),
     path("yeni/", views.OwnerCreateView.as_view(), name="create"),
     path("<int:pk>/", views.OwnerDetailView.as_view(), name="detail"),
     path("<int:pk>/duzenle/", views.OwnerUpdateView.as_view(), name="update"),

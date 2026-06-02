@@ -29,6 +29,8 @@
     </button>
     <div x-show="open" x-cloak @click.outside="open = false"
          class="absolute right-0 mt-2 w-56 card p-1.5 z-40">
+      <a href="{% url 'appointments:walk_in' %}" class="nav-link font-semibold text-brand-700">{% include "partials/_icon.html" with name="stethoscope" %}Hızlı Kabul</a>
+      <div class="border-t border-slate-100 my-1"></div>
       <a href="/sahipler/yeni/" class="nav-link">{% include "partials/_icon.html" with name="users" %}Yeni Sahip</a>
       <a href="/hayvanlar/yeni/" class="nav-link">{% include "partials/_icon.html" with name="paw" %}Yeni Hayvan</a>
       <a href="/randevular/yeni/" class="nav-link">{% include "partials/_icon.html" with name="calendar" %}Yeni Randevu</a>

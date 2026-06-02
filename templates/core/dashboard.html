@@ -2,12 +2,22 @@
 {% block title %}Panel · {{ clinic.name|default:"Riva Veteriner" }}{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-5">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
   <div>
     <h1 class="page-title">Panel</h1>
     <p class="text-sm text-slate-500">{{ today|date:"d F Y, l" }} · Günlük operasyon özeti</p>
   </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'appointments:walk_in' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="stethoscope" %}Hızlı Hasta Kabul</a>
+    <a href="{% url 'appointments:create' %}" class="btn btn-secondary">{% include "partials/_icon.html" with name="calendar" %}Yeni Randevu</a>
+  </div>
 </div>
+
+{# Randevusuz gelen hasta için tek tıkla başlat #}
+<a href="{% url 'appointments:walk_in' %}"
+   class="flex sm:hidden items-center justify-center gap-2 btn btn-primary w-full mb-4">
+  {% include "partials/_icon.html" with name="stethoscope" %}Randevusuz Hasta Kabul
+</a>
 
 {# ---- Özet kartları ---- #}
 <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">

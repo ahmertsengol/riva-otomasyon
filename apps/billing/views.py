@@ -15,8 +15,67 @@ from django.views.generic import CreateView, ListView, UpdateView
 from apps.core.models import ClinicSettings
 from apps.owners.models import Owner
 
-from .forms import ChargeForm, ChargeLineFormSet, PaymentForm, ServiceItemForm
+from .forms import (
+    ChargeForm,
+    ChargeLineFormSet,
+    CheckoutPaymentForm,
+    PaymentForm,
+    ServiceItemForm,
+)
 from .models import Charge, Payment, ServiceItem
+
+
+@login_required
+def checkout(request, exam_id):
+    """Muayeneden tek ekranda hesap kapatma: Charge + satırlar + ödeme tek POST."""
+    from apps.medical.models import Examination
+
+    exam = get_object_or_404(
+        Examination.objects.select_related("patient", "patient__owner", "appointment"), pk=exam_id
+    )
+    existing = Charge.objects.filter(examination=exam).first()
+    if existing:
+        messages.info(request, "Bu muayene için zaten bir işlem var.")
+        return redirect(existing.get_absolute_url())
+
+    gm = ServiceItem.objects.filter(name__iexact="Genel Muayene", active=True).first()
+    default_line = (
+        {"item": gm.pk, "description": gm.name, "qty": 1, "unit_price": gm.default_price}
+        if gm
+        else {"description": "Genel Muayene", "qty": 1, "unit_price": 0}
+    )
+
+    if request.method == "POST":
+        formset = ChargeLineFormSet(request.POST)
+        payform = CheckoutPaymentForm(request.POST)
+        if formset.is_valid() and payform.is_valid():
+            charge = Charge.objects.create(
+                owner=exam.patient.owner, patient=exam.patient, examination=exam,
+                note=f"Muayene #{exam.pk} hesabı",
+            )
+            formset.instance = charge
+            formset.save()
+            charge.recompute()
+            amount = payform.cleaned_data.get("amount")
+            method = payform.cleaned_data.get("method")
+            if amount and amount > 0 and method != Payment.Method.UNPAID:
+                Payment.objects.create(
+                    charge=charge, amount=amount, method=method,
+                    paid_at=payform.cleaned_data.get("paid_at") or timezone.now(),
+                )
+                charge.recompute()
+            if exam.appointment_id:
+                exam.appointment.status = exam.appointment.Status.COMPLETED
+                exam.appointment.save()
+            messages.success(request, "Hesap kapatıldı.")
+            return redirect(charge.get_absolute_url())
+    else:
+        formset = ChargeLineFormSet(initial=[default_line])
+        payform = CheckoutPaymentForm(initial={
+            "method": Payment.Method.CASH,
+            "paid_at": timezone.localtime().strftime("%Y-%m-%dT%H:%M"),
+        })
+    return render(request, "billing/checkout.html", {"exam": exam, "formset": formset, "payform": payform})
 
 
 @login_required

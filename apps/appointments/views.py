@@ -6,9 +6,11 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -16,8 +18,43 @@ from django.views.generic import CreateView, DeleteView, DetailView, UpdateView
 
 from apps.accounts.models import User
 
-from .forms import AppointmentForm
+from .forms import AppointmentForm, QuickIntakeForm
 from .models import Appointment, AppointmentRequest
+
+
+@transaction.atomic
+def _do_quick_intake(form, user):
+    """Tek transaction: sahip/hayvan (gerekirse) + walk-in randevu (muayenede) + muayene."""
+    from apps.medical.models import Examination
+    from apps.owners.models import Owner
+    from apps.patients.models import Patient
+
+    cd = form.cleaned_data
+    existing_patient = cd.get("patient")
+    # Sahip: seçilen > (mevcut hayvanın sahibi) > yeni oluştur. Böylece sahipsiz
+    # mevcut hayvan seçilse bile boş/yanlış sahip oluşmaz (savunmacı).
+    owner = cd.get("owner") or (existing_patient.owner if existing_patient else None)
+    if owner is None:
+        owner = Owner.objects.create(
+            first_name=cd["new_owner_first"], last_name=cd.get("new_owner_last", ""),
+            phone=cd["new_owner_phone"], contact_pref=Owner.ContactPref.WHATSAPP,
+        )
+    patient = existing_patient or Patient.objects.create(
+        owner=owner, name=cd["new_pet_name"], species=cd["new_pet_species"],
+        breed=cd.get("new_pet_breed", ""), sex=cd.get("new_pet_sex") or Patient.Sex.UNKNOWN,
+    )
+    vet = cd.get("vet")
+    if not vet and getattr(user, "role", None) in {User.Role.VET, User.Role.ADMIN}:
+        vet = user
+    appt = Appointment.objects.create(
+        owner=owner, patient=patient, phone_snapshot=owner.phone,
+        starts_at=timezone.now(), duration_min=20, type=cd["type"],
+        status=Appointment.Status.IN_EXAM, source=Appointment.Source.WALK_IN,
+        reminder_enabled=False, assigned_vet=vet, note=cd.get("complaint", ""),
+    )
+    return Examination.objects.create(
+        patient=patient, appointment=appt, vet=vet, complaint=cd.get("complaint", ""),
+    )
 
 
 def _patient_filter_ctx(owner_id, selected):
@@ -34,6 +71,20 @@ def _patient_filter_ctx(owner_id, selected):
         "init_selected": str(selected or ""),
         "init_has_owner": bool(owner_id),
     }
+
+
+@login_required
+def quick_intake(request):
+    """Randevusuz (walk-in) hasta kabul ekranı."""
+    if request.method == "POST":
+        form = QuickIntakeForm(request.POST)
+        if form.is_valid():
+            exam = _do_quick_intake(form, request.user)
+            messages.success(request, "Hasta kabul edildi, muayene açıldı.")
+            return redirect("medical:examination_detail", pk=exam.pk)
+    else:
+        form = QuickIntakeForm()
+    return render(request, "appointments/quick_intake.html", {"form": form})
 
 
 @login_required
@@ -111,6 +162,9 @@ class AppointmentCreateView(LoginRequiredMixin, CreateView):
         response = super().form_valid(form)
         rid = self.request.GET.get("from_request")
         if rid:
+            Appointment.objects.filter(pk=self.object.pk).update(
+                source=Appointment.Source.ONLINE_REQUEST
+            )
             AppointmentRequest.objects.filter(pk=rid).update(
                 status=AppointmentRequest.CONVERTED, linked_appointment=self.object
             )
@@ -170,6 +224,26 @@ def set_status(request, pk):
         appt.save(update_fields=["status", "updated_at", "updated_by"])
         messages.success(request, "Durum güncellendi.")
     return redirect("appointments:detail", pk=pk)
+
+
+@login_required
+@require_POST
+def start_exam(request, pk):
+    """Randevuyu 'Muayenede'ye al + (yoksa) muayeneyi aç → muayene ekranına git."""
+    from apps.medical.models import Examination
+
+    appt = get_object_or_404(Appointment.objects.select_related("patient", "assigned_vet"), pk=pk)
+    exam = Examination.objects.filter(appointment=appt).first()
+    if not exam:
+        exam = Examination.objects.create(
+            patient=appt.patient, appointment=appt,
+            vet=appt.assigned_vet, complaint=appt.note or "",
+        )
+    if appt.status != Appointment.Status.COMPLETED:
+        appt.status = Appointment.Status.IN_EXAM
+        appt.save()
+    messages.success(request, "Hasta muayeneye alındı.")
+    return redirect("medical:examination_detail", pk=exam.pk)
 
 
 # ---------------------------------------------------------------------------

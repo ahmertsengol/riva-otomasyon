@@ -1,14 +1,34 @@
 from __future__ import annotations
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, DecimalField, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from .forms import OwnerForm
 from .models import Owner
+
+
+@login_required
+def owner_options(request):
+    """Telefon/ad ile sahip arama → <option>'lar (HTMX; hızlı kabulde kullanılır)."""
+    q = (request.GET.get("q") or "").strip()
+    owners = (
+        Owner.objects.filter(
+            Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(phone__icontains=q)
+        ).order_by("first_name", "last_name")[:30]
+        if q
+        else Owner.objects.none()
+    )
+    return render(
+        request,
+        "owners/_owner_select.html",
+        {"owners": owners, "selected": request.GET.get("owner", ""), "searched": bool(q)},
+    )
 
 
 class OwnerListView(LoginRequiredMixin, ListView):

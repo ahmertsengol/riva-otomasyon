@@ -5,8 +5,52 @@ from django import forms
 from apps.accounts.models import User
 from apps.core.forms import StyledFormMixin
 from apps.owners.models import Owner
+from apps.patients.models import Patient, Species
 
 from .models import Appointment, AppointmentRequest
+
+
+class QuickIntakeForm(StyledFormMixin, forms.Form):
+    """Hızlı kabul: mevcut sahip/hayvan seç VEYA yeni oluştur; tek transaction."""
+
+    owner = forms.ModelChoiceField(queryset=Owner.objects.all(), required=False, label="Mevcut sahip")
+    new_owner_first = forms.CharField(required=False, label="Yeni sahip — Ad")
+    new_owner_last = forms.CharField(required=False, label="Soyad")
+    new_owner_phone = forms.CharField(required=False, label="Telefon")
+
+    patient = forms.ModelChoiceField(queryset=Patient.objects.all(), required=False, label="Mevcut hayvan")
+    new_pet_name = forms.CharField(required=False, label="Yeni hayvan — Ad")
+    new_pet_species = forms.ModelChoiceField(
+        queryset=Species.objects.filter(active=True), required=False, label="Tür"
+    )
+    new_pet_breed = forms.CharField(required=False, label="Irk")
+    new_pet_sex = forms.ChoiceField(
+        choices=Patient.Sex.choices, required=False, initial=Patient.Sex.UNKNOWN, label="Cinsiyet"
+    )
+
+    type = forms.ChoiceField(
+        choices=Appointment.Type.choices, initial=Appointment.Type.GENERAL, label="Geliş tipi"
+    )
+    complaint = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}), label="Şikayet / not")
+    vet = forms.ModelChoiceField(
+        queryset=User.objects.filter(role__in=[User.Role.VET, User.Role.ADMIN], is_active=True),
+        required=False, label="Hekim",
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        owner = cleaned.get("owner")
+        patient = cleaned.get("patient")
+        has_new_owner = bool(cleaned.get("new_owner_first") and cleaned.get("new_owner_phone"))
+        has_new_pet = bool(cleaned.get("new_pet_name") and cleaned.get("new_pet_species"))
+
+        if not owner and not has_new_owner:
+            self.add_error("new_owner_first", "Mevcut sahip seçin ya da ad + telefon girin.")
+        if not patient and not has_new_pet:
+            self.add_error("new_pet_name", "Mevcut hayvan seçin ya da ad + tür girin.")
+        if owner and patient and patient.owner_id != owner.pk:
+            self.add_error("patient", "Seçilen hayvan bu sahibe ait değil.")
+        return cleaned
 
 
 class AppointmentForm(StyledFormMixin, forms.ModelForm):

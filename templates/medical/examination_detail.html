@@ -11,11 +11,31 @@
         <p class="text-sm text-slate-500">{{ exam.created_at|date:"d F Y, H:i" }}</p>
       </div>
     </div>
-    <div class="flex flex-wrap gap-2">
-      <a href="{% url 'patients:detail' exam.patient.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="paw" %}Hayvan</a>
-      {% if exam.appointment %}<a href="{% url 'appointments:detail' exam.appointment.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="calendar" %}Randevu</a>{% endif %}
-      <a href="{% url 'medical:prescription_create' %}?patient={{ exam.patient.pk }}&examination={{ exam.pk }}" class="btn btn-primary btn-sm">{% include "partials/_icon.html" with name="file" %}Reçete</a>
+    <a href="{% url 'patients:detail' exam.patient.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="paw" %}Hayvan</a>
+  </div>
+
+  {# ---- Muayene komuta paneli: klinik aksiyonları tek blokta ---- #}
+  <div class="card card-pad mb-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="section-title mr-1">İşlemler:</span>
+      <a href="{% url 'medical:prescription_create' %}?patient={{ exam.patient.pk }}&examination={{ exam.pk }}" class="btn btn-primary btn-sm">{% include "partials/_icon.html" with name="file" %}Reçete Yaz</a>
+      <a href="{% url 'vaccines:record_create' %}?patient={{ exam.patient.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="syringe" %}Aşı / Uygulama</a>
+      <a href="{% url 'medical:lab_result_create' %}?patient={{ exam.patient.pk }}&examination={{ exam.pk }}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="file" %}Lab Ekle</a>
+      {% if charge %}
+        <a href="{% url 'billing:charge_detail' charge.pk %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="wallet" %}İşlemi Gör</a>
+      {% else %}
+        <a href="{% url 'billing:checkout' exam.pk %}" class="btn btn-primary btn-sm">{% include "partials/_icon.html" with name="wallet" %}Hesap Kapat</a>
+      {% endif %}
     </div>
+    {% if charge %}
+    <div class="mt-3 flex flex-wrap items-center gap-2 text-sm border-t border-slate-100 pt-3">
+      {% include "billing/_charge_status.html" with charge=charge %}
+      <span class="text-slate-500">Toplam <strong class="text-slate-800">{{ charge.total|floatformat:0 }} ₺</strong></span>
+      <span class="text-slate-500">· Tahsil <strong class="text-emerald-600">{{ charge.paid_amount|floatformat:0 }} ₺</strong></span>
+      {% if charge.balance > 0 %}<span class="text-slate-500">· Kalan <strong class="text-red-600">{{ charge.balance|floatformat:0 }} ₺</strong></span>
+      <a href="{% url 'billing:charge_payment' charge.pk %}" class="btn btn-secondary btn-sm">Tahsilat Ekle</a>{% endif %}
+    </div>
+    {% endif %}
   </div>
 
   <div class="grid lg:grid-cols-3 gap-4">

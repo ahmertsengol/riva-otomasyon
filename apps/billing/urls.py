@@ -7,6 +7,7 @@ app_name = "billing"
 urlpatterns = [
     path("", views.index, name="index"),
     path("islem/yeni/", views.ChargeCreateView.as_view(), name="charge_create"),
+    path("muayene/<int:exam_id>/hesap-kapat/", views.checkout, name="checkout"),
     path("islem/<int:pk>/", views.charge_detail, name="charge_detail"),
     path("islem/<int:pk>/e-fatura/", views.e_invoice_sim, name="e_invoice_sim"),
     path("islem/<int:charge_pk>/tahsilat/", views.payment_create, name="charge_payment"),

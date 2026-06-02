@@ -27,6 +27,12 @@ class Appointment(BaseModel):
         CANCELLED = "cancelled", "İptal"
         NO_SHOW = "no_show", "Gelmedi"
 
+    class Source(models.TextChoices):
+        SCHEDULED = "scheduled", "Planlı"
+        WALK_IN = "walk_in", "Hızlı kabul"
+        ONLINE_REQUEST = "online_request", "Online talep"
+        AUTO_FOLLOWUP = "auto_followup", "Otomatik (sonraki doz)"
+
     owner = models.ForeignKey(
         "owners.Owner", on_delete=models.CASCADE, related_name="appointments", verbose_name="sahip"
     )
@@ -37,6 +43,9 @@ class Appointment(BaseModel):
     starts_at = models.DateTimeField("tarih/saat", db_index=True)
     duration_min = models.PositiveSmallIntegerField("süre (dk)", default=30)
     type = models.CharField("tip", max_length=20, choices=Type.choices, default=Type.GENERAL)
+    source = models.CharField(
+        "kaynak", max_length=20, choices=Source.choices, default=Source.SCHEDULED, db_index=True
+    )
     status = models.CharField(
         "durum", max_length=20, choices=Status.choices, default=Status.CONFIRMED, db_index=True
     )

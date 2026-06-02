@@ -82,6 +82,7 @@ class VaccineRecordCreateView(LoginRequiredMixin, CreateView):
             starts_at=starts_at,
             type=Appointment.Type.VACCINE,
             status=Appointment.Status.REQUESTED,
+            source=Appointment.Source.AUTO_FOLLOWUP,
             assigned_vet=record.vet,
             note=f"Otomatik: {record.display_name} sonraki doz",
         )

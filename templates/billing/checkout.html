@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Hesap Kapat · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="flex items-center gap-2 mb-5">
+    <a href="{% url 'medical:examination_detail' exam.pk %}" class="btn btn-ghost px-2">‹</a>
+    <div>
+      <h1 class="page-title">Hesap Kapat</h1>
+      <p class="text-sm text-slate-500">
+        {{ exam.patient.name }} · {{ exam.patient.owner.full_name }} · Muayene #{{ exam.pk }}
+      </p>
+    </div>
+  </div>
+
+  <form method="post" class="card card-pad space-y-5">
+    {% csrf_token %}
+    {% if formset.non_form_errors %}<div class="field-error">{{ formset.non_form_errors|join:" " }}</div>{% endif %}
+
+    <div>
+      <h2 class="section-title mb-2">Satırlar (hizmet/ürün)</h2>
+      {{ formset.management_form }}
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead><tr><th>Hizmet/Ürün</th><th>Açıklama</th><th>Adet</th><th>Birim ₺</th>{% if formset.can_delete %}<th>Sil</th>{% endif %}</tr></thead>
+          <tbody>
+            {% for f in formset %}
+            <tr>
+              {{ f.id }}
+              <td>{{ f.item }}</td>
+              <td>{{ f.description }}</td>
+              <td class="w-20">{{ f.qty }}</td>
+              <td class="w-28">{{ f.unit_price }}</td>
+              {% if formset.can_delete %}<td class="w-10 text-center">{{ f.DELETE }}</td>{% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="help">İlk satır "Genel Muayene" olarak hazır gelir; düzenleyebilir, satır ekleyebilirsiniz.</p>
+    </div>
+
+    <div class="border-t border-slate-100 pt-4">
+      <h2 class="section-title mb-2">Ödeme</h2>
+      <div class="grid sm:grid-cols-3 gap-4">
+        {% include "partials/_field.html" with field=payform.amount %}
+        {% include "partials/_field.html" with field=payform.method %}
+        {% include "partials/_field.html" with field=payform.paid_at %}
+      </div>
+      <p class="help">Tutar boş bırakılır veya "Ödenmedi" seçilirse işlem <strong>Bekliyor</strong> kalır (borç). Kısmi tutar → <strong>Kısmi ödendi</strong>.</p>
+    </div>
+
+    <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
+      <a href="{% url 'medical:examination_detail' exam.pk %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">Hesabı Kapat</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

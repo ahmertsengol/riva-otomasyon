@@ -677,3 +677,98 @@ def test_reminder_state_based_template_selection(db):
     generate_reminders()
     assert up.messages.first().body.startswith("YAKLASAN")
     assert od.messages.first().body.startswith("GECIKEN")
+
+
+def test_walk_in_to_checkout_end_to_end(auth_client, admin_user, db):
+    """Klinik akışı: Hızlı Kabul → Muayene → Hesap Kapat."""
+    from apps.appointments.models import Appointment
+    from apps.billing.models import Charge, ServiceItem
+    from apps.medical.models import Examination
+
+    sp = Species.objects.create(name="Kedi")
+    # 1) Hızlı kabul: yeni sahip + yeni hayvan
+    resp = auth_client.post(reverse("appointments:walk_in"), {
+        "owner": "", "new_owner_first": "Akış", "new_owner_last": "Test", "new_owner_phone": "0566 10 20",
+        "patient": "", "new_pet_name": "Pati", "new_pet_species": sp.pk, "new_pet_sex": "female",
+        "type": "general", "complaint": "Kusma", "vet": admin_user.pk,
+    })
+    assert resp.status_code == 302
+    owner = Owner.objects.get(first_name="Akış")
+    appt = Appointment.objects.get(owner=owner)
+    assert appt.status == Appointment.Status.IN_EXAM
+    assert appt.source == Appointment.Source.WALK_IN
+    assert appt.reminder_enabled is False
+    exam = Examination.objects.get(appointment=appt)
+    assert f"/muayeneler/{exam.pk}/" in resp.url
+
+    # 2) Muayene komuta ekranı render
+    body = auth_client.get(reverse("medical:examination_detail", args=[exam.pk])).content.decode()
+    assert "Hesap Kapat" in body
+
+    # 3) Hesap kapat (tek ekran) — kısmi ödeme
+    ServiceItem.objects.create(name="Genel Muayene", default_price=300)
+    resp2 = auth_client.post(reverse("billing:checkout", args=[exam.pk]), {
+        "lines-TOTAL_FORMS": "4", "lines-INITIAL_FORMS": "0", "lines-MIN_NUM_FORMS": "0", "lines-MAX_NUM_FORMS": "1000",
+        "lines-0-item": "", "lines-0-description": "Genel Muayene", "lines-0-qty": "1", "lines-0-unit_price": "400",
+        "lines-1-item": "", "lines-1-description": "", "lines-1-qty": "", "lines-1-unit_price": "",
+        "lines-2-item": "", "lines-2-description": "", "lines-2-qty": "", "lines-2-unit_price": "",
+        "lines-3-item": "", "lines-3-description": "", "lines-3-qty": "", "lines-3-unit_price": "",
+        "amount": "150", "method": "cash", "paid_at": "",
+    })
+    assert resp2.status_code == 302
+    charge = Charge.objects.get(examination=exam)
+    assert charge.total == __import__("decimal").Decimal("400.00")
+    assert charge.status == Charge.PARTIAL  # 150 < 400
+    appt.refresh_from_db()
+    assert appt.status == Appointment.Status.COMPLETED
+
+    # 4) İkinci kez checkout → yeni charge oluşmaz
+    auth_client.get(reverse("billing:checkout", args=[exam.pk]))
+    assert Charge.objects.filter(examination=exam).count() == 1
+
+
+def test_walk_in_owner_live_search_finds_owner(auth_client, db):
+    """Hızlı kabul'deki canlı sahip araması mevcut sahibi bulmalı (param adı endpoint ile uyumlu)."""
+    import re
+
+    Owner.objects.create(first_name="Arama", last_name="Hedef", phone="0599 88 77")
+    html = auth_client.get(reverse("appointments:walk_in")).content.decode()
+    # owner-field'ı dolduran arama input'unu bul ve gönderdiği param adını çıkar
+    tag = re.search(r'<input[^>]*hx-target="#owner-field"[^>]*>', html)
+    assert tag, "Hızlı kabul'de sahip arama input'u bulunamadı"
+    param = re.search(r'name="([^"]+)"', tag.group(0)).group(1)
+    # Tarayıcı bu input değerini ?<param>= olarak gönderir → endpoint sahibi bulmalı
+    res = auth_client.get(reverse("owners:options"), {param: "Arama"}).content.decode()
+    assert "Arama Hedef" in res, f"Arama '{param}' parametresiyle sahibi bulamadı"
+
+
+def test_start_exam_from_appointment(auth_client, admin_user, db):
+    """Randevudan 'Muayeneye Al': durum in_exam + muayene açılır, ikinci kez tekrar açmaz."""
+    from apps.appointments.models import Appointment
+    from apps.medical.models import Examination
+
+    owner = Owner.objects.create(first_name="Randevulu", last_name="Hasta", phone="0555 00 11")
+    sp = Species.objects.create(name="Kedi")
+    pet = Patient.objects.create(owner=owner, name="Tekir", species=sp)
+    appt = Appointment.objects.create(
+        owner=owner, patient=pet, starts_at=timezone.now(),
+        status=Appointment.Status.CONFIRMED, assigned_vet=admin_user,
+    )
+    resp = auth_client.post(reverse("appointments:start_exam", args=[appt.pk]))
+    assert resp.status_code == 302
+    appt.refresh_from_db()
+    assert appt.status == Appointment.Status.IN_EXAM
+    exam = Examination.objects.get(appointment=appt)
+    assert f"/muayeneler/{exam.pk}/" in resp.url
+    # ikinci kez → yeni muayene oluşmamalı
+    auth_client.post(reverse("appointments:start_exam", args=[appt.pk]))
+    assert Examination.objects.filter(appointment=appt).count() == 1
+
+
+def test_appointment_source_default_scheduled(db, admin_user):
+    from apps.appointments.models import Appointment
+    owner = Owner.objects.create(first_name="K", last_name="L", phone="0560")
+    sp = Species.objects.create(name="Kuş")
+    pet = Patient.objects.create(owner=owner, name="Cik", species=sp)
+    appt = Appointment.objects.create(owner=owner, patient=pet, starts_at=timezone.now())
+    assert appt.source == Appointment.Source.SCHEDULED

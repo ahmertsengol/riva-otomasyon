@@ -7,6 +7,25 @@ from apps.core.forms import StyledFormMixin
 from .models import Charge, ChargeLine, Payment, ServiceItem
 
 
+class CheckoutPaymentForm(StyledFormMixin, forms.Form):
+    """Hesap kapatma ekranındaki ödeme bölümü (Charge sonradan oluşturulur)."""
+
+    amount = forms.DecimalField(
+        label="Tahsil edilen tutar", max_digits=10, decimal_places=2, required=False, min_value=0
+    )
+    method = forms.ChoiceField(
+        label="Ödeme yöntemi", choices=Payment.Method.choices, initial=Payment.Method.CASH
+    )
+    paid_at = forms.DateTimeField(
+        label="Ödeme zamanı", required=False,
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["paid_at"].input_formats = ["%Y-%m-%dT%H:%M"]
+
+
 class ChargeForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Charge

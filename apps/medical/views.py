@@ -85,6 +85,12 @@ class ExaminationDetailView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         ctx["prescriptions"] = self.object.prescriptions.prefetch_related("items").all()
         ctx["lab_results"] = self.object.lab_results.all()
+        try:
+            from apps.billing.models import Charge
+
+            ctx["charge"] = Charge.objects.filter(examination=self.object).first()
+        except Exception:
+            ctx["charge"] = None
         return ctx
 
 
