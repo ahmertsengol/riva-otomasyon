@@ -4,6 +4,9 @@
   <button @click="sidebar = !sidebar" class="lg:hidden btn btn-ghost px-2" aria-label="Menü">
     {% include "partials/_icon.html" with name="menu" %}
   </button>
+  <button onclick="toggleSidebar()" class="hidden lg:inline-grid icon-btn shrink-0" aria-label="Menüyü daralt/genişlet" title="Menüyü daralt/genişlet">
+    {% include "partials/_icon.html" with name="menu" %}
+  </button>
 
   {# Global arama #}
   <form action="/ara/" method="get" class="flex-1 max-w-xl">

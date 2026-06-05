@@ -114,3 +114,72 @@
   .page-title { @apply text-xl font-semibold text-slate-900; }
   .section-title { @apply text-sm font-semibold text-slate-500 uppercase tracking-wide; }
 }
+
+/* ----------------------------------------------------------------------------
+   Daraltılabilir sol menü (masaüstü) — ikon şeridine iner, içerik genişler
+---------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  /* Yumuşak ama hızlı aç/kapa animasyonu */
+  #app-layout { transition: grid-template-columns 0.22s ease; }
+  #app-layout aside { overflow: hidden; white-space: nowrap; }
+  #app-layout.sidebar-collapsed { grid-template-columns: 4rem 1fr; }
+  #app-layout.sidebar-collapsed .sidebar-brand,
+  #app-layout.sidebar-collapsed .section-title,
+  #app-layout.sidebar-collapsed .nav-link > span { display: none; }
+  #app-layout.sidebar-collapsed .nav-link { justify-content: center; padding-left: 0; padding-right: 0; }
+  #app-layout.sidebar-collapsed aside .h-16 { justify-content: center; padding-left: 0; padding-right: 0; }
+}
+
+/* ----------------------------------------------------------------------------
+   FullCalendar teması — tasarım sistemiyle uyumlu (açık tema + teal)
+---------------------------------------------------------------------------- */
+.fc {
+  --fc-border-color: #e2e8f0;
+  --fc-page-bg-color: #ffffff;
+  --fc-neutral-bg-color: #f8fafc;
+  --fc-today-bg-color: #f0fdfa;
+  --fc-now-indicator-color: #dc2626;
+  --fc-business-hours-bg-color: rgba(13, 148, 136, 0.05);
+  --fc-event-border-color: transparent;
+  font-family: inherit;
+  font-size: 13px;
+}
+.fc .fc-toolbar.fc-header-toolbar { margin-bottom: 1rem; gap: 0.5rem; flex-wrap: wrap; }
+.fc .fc-toolbar-title { font-size: 1.15rem; font-weight: 600; color: #0f172a; }
+.fc .fc-button-primary {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: #334155;
+  text-transform: none;
+  font-weight: 500;
+  box-shadow: none;
+  padding: 0.4rem 0.7rem;
+}
+.fc .fc-button-primary:hover { background: #f1f5f9; border-color: #94a3b8; color: #0f172a; }
+.fc .fc-button-primary:disabled { background: #f8fafc; color: #94a3b8; }
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: #0d9488; border-color: #0d9488; color: #fff;
+}
+.fc .fc-button-primary:focus,
+.fc .fc-button-primary:focus-visible { box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.35); outline: none; }
+.fc .fc-col-header-cell-cushion,
+.fc .fc-timegrid-axis-cushion,
+.fc .fc-daygrid-day-number { color: #475569; text-decoration: none; }
+.fc .fc-col-header-cell-cushion { font-weight: 600; padding: 6px 4px; }
+.fc-day-today .fc-col-header-cell-cushion,
+.fc-day-today .fc-daygrid-day-number { color: #0d9488; font-weight: 700; }
+.fc-event { border: none; border-radius: 7px; padding: 0; cursor: pointer; box-shadow: 0 1px 2px rgba(2,6,23,.12); }
+.fc-event:hover { filter: brightness(0.95); }
+.fc .fc-timegrid-now-indicator-line { border-color: #dc2626; }
+.fc .fc-scrollgrid { border-radius: 10px; overflow: hidden; }
+
+/* Saat dilimleri: randevular okunur ama takvim ekrana sığsın (kendi içinde kayar) */
+.fc .fc-timegrid-slot { height: 2.3rem; }
+.fc .fc-timegrid-slot-label-cushion { color: #64748b; font-weight: 600; }
+/* Etkinlik içi yazı: net beyaz, kısa etkinlikte bile okunur */
+.fc-timegrid-event { min-height: 1.9rem; }
+.fc-timegrid-event .fc-event-main { padding: 2px 6px; color: #fff; }
+.fc-event .fc-event-main { color: #fff; }
+.fc-event .riva-ev-title { font-weight: 700; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-event .riva-ev-sub { font-size: 11px; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

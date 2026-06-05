@@ -10,6 +10,7 @@ urlpatterns = [
     # Takvim & randevular
     path("randevular/", views.calendar, name="calendar"),
     path("randevular/olaylar/", views.events, name="events"),
+    path("randevular/tasi/", views.reschedule, name="reschedule"),
     path("randevular/yeni/", views.AppointmentCreateView.as_view(), name="create"),
     path("randevular/<int:pk>/", views.AppointmentDetailView.as_view(), name="detail"),
     path("randevular/<int:pk>/duzenle/", views.AppointmentUpdateView.as_view(), name="update"),

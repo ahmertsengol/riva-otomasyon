@@ -87,7 +87,7 @@ kullanıcıyı `created_by/updated_by`'a yazar + `AuditLog` üretir (aktif kulla
 hayvan→tür-aşı-protokolü, hayvan→muayene). Dört parça:
 1. **Endpoint** parent id alıp `_*_select.html` partial'ı (içinde `<select name=.. id=id_..>`) döner.
    Mevcutlar: `patients:options` (owner→patient), `vaccines:definition_options` (patient→species protokol),
-   `medical:examination_options` (patient→examination).
+   `medical:examination_options` (patient→examination), `owners:options` (`q` → telefon/ad ile sahip arama; hızlı kabulde).
 2. **Form** parent alanın widget'ına `hx-get/hx-target="#<x>-field"/hx-trigger="change"/hx-swap="innerHTML"`
    ekler (`__init__`'te).
 3. **Template** bağımlı alanı `_field.html` yerine `<div id="<x>-field">{% include partial %}</div>` + elle label.
@@ -130,6 +130,38 @@ try/except ile sarar; modül yoksa 0/boş döner. Yeni modül gelince kendiliği
 olduğunu sayıp `next_due_at`'i hesaplar. Aşı uygulamada (`create_followup` açıksa) sonraki doz için
 **"planlandı" randevu otomatik** oluşur (Karma 1 → Karma 2).
 
+## Klinik iş akışı (Hızlı Kabul → Muayene → Hesap Kapat)
+
+Gerçek klinik akışını hızlandıran, modelleri DEĞİŞTİRMEDEN `Appointment + Examination`'ı birlikte
+"geliş kaydı" gibi kullanan üçlü:
+- **Hızlı Kabul** (`appointments:walk_in`, `/hasta-kabul/hizli/`): `QuickIntakeForm` + `_do_quick_intake`
+  (tek `@transaction.atomic`) → sahip(ara/yeni)+hayvan(seç/yeni)+`Appointment`(status=`in_exam`,
+  source=`walk_in`, `reminder_enabled=False`)+`Examination` → muayene ekranına redirect.
+- **Muayeneye Al** (`appointments:start_exam`, POST): randevuyu `in_exam` yapar + (yoksa) muayene açar →
+  muayene ekranı. Randevulu hastayı tek tıkla muayeneye alır.
+- **Tek ekran Hesap Kapat** (`billing:checkout`, `/kasa/muayene/<exam_id>/hesap-kapat/`): `ChargeLineFormSet`
+  + `CheckoutPaymentForm` → `Charge`+satır+(opsiyonel)`Payment` tek POST; varsayılan "Genel Muayene" satırı;
+  kapanınca bağlı randevu `completed`; **mevcut charge varsa tekrar açmaz** (charge_detail'e yönlendirir).
+- Muayene detayı (`medical/examination_detail.html`) = **komuta paneli**: Reçete/Aşı/Lab/Hesap Kapat + ödeme durumu.
+- `Appointment.source` (scheduled/walk_in/online_request/auto_followup): online dönüşüm + aşı followup + walk-in etiketlenir.
+
+## Takvim (FullCalendar)
+
+`appointments/calendar.html` + `events`(JSON akış) + `reschedule`(POST). 
+- **Sürükle-bırak/resize** → `appointments:reschedule` randevu tarih/süre günceller.
+- Filtreler: hekim/durum/tip (server-side `events`'te). Zengin event kartı (`eventContent`): hayvan adı + saat·tip.
+- `height: 'auto'` → **sayfa scroll'u** kullanılır (takvim-içi scroll İSTENMİYOR — kullanıcı tercihi, geri ekleme).
+- Sayfa tam genişlik: `{% block main_width %}max-w-none{% endblock %}` (base.html'deki `main` cap'ini ezer;
+  diğer sayfalar `max-w-[1400px]` kalır).
+- FullCalendar teması `static/css/input.css`'te (`.fc*` ham CSS). Yeni şablon sınıfı eklersen `make css`.
+
+## Daraltılabilir sol menü (icon rail)
+
+`base.html` `#app-layout` grid; üst bardaki `toggleSidebar()` `.sidebar-collapsed` sınıfını açar (16rem→4rem
+ikon şeridi, `@media(min-width:1024px)`). Durum **SAYFA BAZLI** saklanır: `localStorage['sidebarCollapsed:'+pathname]`
+(bir sayfada daraltmak diğerlerini etkilemez). 0.22s `grid-template-columns` geçişi; toggle sonrası 240ms'de
+`resize` dispatch → takvim yeniden ölçer.
+
 ## Performans / tuzaklar
 
 - `Owner.balance` **property** N+1'dir; liste/sorgu görünümlerinde kullanma. `OwnerListView` bunun yerine
@@ -154,5 +186,11 @@ mümkünse gerçek HTTP akışı (test client veya runserver). `seed_demo` idemp
 
 MVP (M0–M9) tamam: sahip/hayvan, randevu+takvim, tıbbi kayıtlar + reçete/aşı/aşı-geçmişi PDF, aşı protokol
 motoru + seri, hatırlatma kuyruğu + zamanlayıcı + bildirim zili, kasa (işlem/tahsilat/borç/e-fatura
-simülasyonu), raporlar, panel, PWA, oto-deploy. Logo entegre. **Sonraki:** MVP sonrası fazlar (stok, gerçek
+simülasyonu), raporlar, panel, PWA, oto-deploy. Logo entegre.
+Ek olarak: **klinik iş akışı** (Hızlı Kabul → Muayene komuta → tek ekran Hesap Kapat + Muayeneye Al),
+**geliştirilmiş takvim** (sürükle-bırak/filtre/tam genişlik), **sayfa-bazlı daraltılabilir menü**,
+in-app **Şifre Değiştir** ekranı (`accounts:password_change`).
+**Sonraki:** parazit/koruyucu uygulama motoru (aşı motorunu genelleştir), MVP sonrası fazlar (stok, gerçek
 e-fatura, POS, pet hotel, gelişmiş raporlar) — `docs/`.
+
+> Not (test): pytest doğrudan çağrılırsa DYLD gerekir; `make test` kullan. Güncel: 29 smoke testi.

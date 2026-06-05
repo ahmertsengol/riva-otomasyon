@@ -1,31 +1,42 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Randevular · {{ clinic.name }}{% endblock %}
+{% block main_width %}max-w-none{% endblock %}
 
 {% block content %}
-<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-  <h1 class="page-title">Randevular</h1>
-  <div class="flex items-center gap-2">
-    <select id="vetFilter" class="select w-auto">
-      <option value="">Tüm hekimler</option>
-      {% for v in vets %}<option value="{{ v.pk }}">{{ v.display_name }}</option>{% endfor %}
-    </select>
-    <a href="{% url 'appointments:request_list' %}" class="btn btn-secondary">{% include "partials/_icon.html" with name="inbox" %}Talepler{% if pending_request_count %} <span class="badge badge-danger">{{ pending_request_count }}</span>{% endif %}</a>
-    <a href="{% url 'appointments:create' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="plus" %}Yeni Randevu</a>
-  </div>
-</div>
-
-{# Durum renk açıklaması #}
-<div class="flex flex-wrap gap-3 mb-3 text-xs text-slate-500">
-  {% for value, label in statuses %}
-  <span class="inline-flex items-center gap-1.5">
-    <span class="h-2.5 w-2.5 rounded-full" style="background: {% if value == 'requested' %}#64748b{% elif value == 'confirmed' %}#0d9488{% elif value == 'arrived' %}#0284c7{% elif value == 'in_exam' %}#7c3aed{% elif value == 'completed' %}#059669{% elif value == 'cancelled' %}#dc2626{% else %}#d97706{% endif %}"></span>{{ label }}
-  </span>
-  {% endfor %}
+{# Kompakt tek satır kontrol: filtreler solda, aksiyonlar sağda → takvim öne çıksın #}
+<div class="flex flex-wrap items-center gap-2 mb-3">
+  <select id="fVet" class="select w-auto py-1.5">
+    <option value="">Tüm hekimler</option>
+    {% for v in vets %}<option value="{{ v.pk }}">{{ v.display_name }}</option>{% endfor %}
+  </select>
+  <select id="fStatus" class="select w-auto py-1.5">
+    <option value="">Tüm durumlar</option>
+    {% for value, label in statuses %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+  </select>
+  <select id="fType" class="select w-auto py-1.5">
+    <option value="">Tüm tipler</option>
+    {% for value, label in types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+  </select>
+  <div class="flex-1"></div>
+  <a href="{% url 'appointments:request_list' %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="inbox" %}Talepler{% if pending_request_count %} <span class="badge badge-danger">{{ pending_request_count }}</span>{% endif %}</a>
+  <a href="{% url 'appointments:walk_in' %}" class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="stethoscope" %}Hızlı Kabul</a>
+  <a href="{% url 'appointments:create' %}" class="btn btn-primary btn-sm">{% include "partials/_icon.html" with name="plus" %}Yeni Randevu</a>
 </div>
 
 <div class="card card-pad">
   <div id="calendar"></div>
+</div>
+
+{# Açıklamalar altta, küçük ve sönük #}
+<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-400">
+  {% for value, label in statuses %}
+  <span class="inline-flex items-center gap-1">
+    <span class="h-2 w-2 rounded-full" style="background: {% if value == 'requested' %}#64748b{% elif value == 'confirmed' %}#0d9488{% elif value == 'arrived' %}#0284c7{% elif value == 'in_exam' %}#7c3aed{% elif value == 'completed' %}#059669{% elif value == 'cancelled' %}#dc2626{% else %}#d97706{% endif %}"></span>{{ label }}
+  </span>
+  {% endfor %}
+  <span class="mx-1">·</span>
+  <span>Sürükle = taşı · alt kenar = süre · boş saate tıkla = yeni randevu</span>
 </div>
 {% endblock %}
 
@@ -34,7 +45,20 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const el = document.getElementById('calendar');
-  const vetFilter = document.getElementById('vetFilter');
+  const fVet = document.getElementById('fVet');
+  const fStatus = document.getElementById('fStatus');
+  const fType = document.getElementById('fType');
+  const csrf = '{{ csrf_token }}';
+
+  function post(url, data) {
+    const body = new URLSearchParams(data);
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    }).then(r => r.json());
+  }
+
   const calendar = new FullCalendar.Calendar(el, {
     initialView: 'timeGridWeek',
     locale: 'tr',
@@ -42,29 +66,80 @@ document.addEventListener('DOMContentLoaded', function () {
     nowIndicator: true,
     slotMinTime: '08:00:00',
     slotMaxTime: '20:00:00',
-    height: 'auto',
+    slotDuration: '00:30:00',
+    height: 'auto',             // tüm saatler görünür; sayfanın kendi scroll'u kullanılır
+    allDaySlot: false,
+    stickyHeaderDates: true,
+    businessHours: { daysOfWeek: [1, 2, 3, 4, 5, 6], startTime: '09:00', endTime: '19:00' },
+    editable: true,
+    eventResizableFromStart: false,
+    selectable: true,
+    selectMirror: true,
+    dayMaxEvents: true,
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+      right: 'timeGridDay,timeGridWeek,dayGridMonth',
     },
     buttonText: { today: 'Bugün', month: 'Ay', week: 'Hafta', day: 'Gün' },
+
     events: function (info, success, failure) {
       const params = new URLSearchParams({ start: info.startStr, end: info.endStr });
-      if (vetFilter.value) params.append('vet', vetFilter.value);
+      if (fVet.value) params.append('vet', fVet.value);
+      if (fStatus.value) params.append('status', fStatus.value);
+      if (fType.value) params.append('type', fType.value);
       fetch('{% url "appointments:events" %}?' + params.toString())
         .then(r => r.json()).then(success).catch(failure);
     },
+
+    // Randevu kartı: 1. satır hayvan adı, 2. satır saat · tip (net beyaz, okunur)
+    eventContent: function (arg) {
+      const p = arg.event.extendedProps;
+      const esc = (s) => (s || '').replace(/[&<>"]/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const wrap = document.createElement('div');
+      wrap.style.lineHeight = '1.3';
+      wrap.style.overflow = 'hidden';
+      wrap.innerHTML =
+        '<div class="riva-ev-title">' + esc(arg.event.title) + '</div>' +
+        '<div class="riva-ev-sub">' + (arg.timeText || '') +
+        (p.type ? ' · ' + esc(p.type) : '') + '</div>';
+      return { domNodes: [wrap] };
+    },
+    eventDidMount: function (arg) {
+      const p = arg.event.extendedProps;
+      arg.el.title = arg.event.title + ' · ' + (p.owner || '') + ' · ' + (p.phone || '') +
+        '\n' + (p.type || '') + ' · ' + (p.status || '');
+    },
+
     eventClick: function (arg) {
       arg.jsEvent.preventDefault();
       if (arg.event.url) window.location = arg.event.url;
     },
-    dateClick: function (arg) {
-      window.location = '{% url "appointments:create" %}?date=' + encodeURIComponent(arg.dateStr.slice(0,16));
-    }
+
+    // Boş saat aralığını seçince yeni randevu (tarih + süre önceden dolu)
+    select: function (arg) {
+      const start = arg.startStr.slice(0, 16);
+      window.location = '{% url "appointments:create" %}?date=' + encodeURIComponent(start);
+    },
+
+    // Sürükle-bırak ile taşıma
+    eventDrop: function (arg) {
+      post('{% url "appointments:reschedule" %}', {
+        id: arg.event.id, start: arg.event.start.toISOString(),
+        end: arg.event.end ? arg.event.end.toISOString() : '',
+      }).then(r => { if (!r.ok) arg.revert(); }).catch(() => arg.revert());
+    },
+    // Süreyi değiştir (alt kenardan çek)
+    eventResize: function (arg) {
+      post('{% url "appointments:reschedule" %}', {
+        id: arg.event.id, start: arg.event.start.toISOString(),
+        end: arg.event.end ? arg.event.end.toISOString() : '',
+      }).then(r => { if (!r.ok) arg.revert(); }).catch(() => arg.revert());
+    },
   });
   calendar.render();
-  vetFilter.addEventListener('change', () => calendar.refetchEvents());
+  [fVet, fStatus, fType].forEach(s => s.addEventListener('change', () => calendar.refetchEvents()));
 });
 </script>
 {% endblock %}

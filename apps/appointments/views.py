@@ -93,37 +93,66 @@ def calendar(request):
     return render(
         request,
         "appointments/calendar.html",
-        {"vets": vets, "statuses": Appointment.Status.choices},
+        {
+            "vets": vets,
+            "statuses": Appointment.Status.choices,
+            "types": Appointment.Type.choices,
+        },
     )
 
 
 @login_required
 def events(request):
-    """FullCalendar için JSON olay akışı."""
+    """FullCalendar için JSON olay akışı (hekim/durum/tip filtreli)."""
     qs = Appointment.objects.select_related("patient", "owner", "assigned_vet")
-    start = request.GET.get("start")
-    end = request.GET.get("end")
-    if start:
+    if start := request.GET.get("start"):
         qs = qs.filter(starts_at__gte=parse_datetime(start))
-    if end:
+    if end := request.GET.get("end"):
         qs = qs.filter(starts_at__lte=parse_datetime(end))
-    vet = request.GET.get("vet")
-    if vet:
+    if vet := request.GET.get("vet"):
         qs = qs.filter(assigned_vet_id=vet)
+    if status := request.GET.get("status"):
+        qs = qs.filter(status=status)
+    if atype := request.GET.get("type"):
+        qs = qs.filter(type=atype)
 
     data = [
         {
             "id": a.pk,
-            "title": f"{a.patient.name} · {a.get_type_display()}",
+            "title": a.patient.name,
             "start": a.starts_at.isoformat(),
             "end": (a.starts_at + timedelta(minutes=a.duration_min)).isoformat(),
             "color": a.color,
             "url": reverse("appointments:detail", args=[a.pk]),
-            "extendedProps": {"status": a.get_status_display()},
+            "extendedProps": {
+                "status": a.get_status_display(),
+                "status_code": a.status,
+                "type": a.get_type_display(),
+                "owner": a.owner.full_name,
+                "phone": a.phone_snapshot or a.owner.phone,
+                "vet": a.assigned_vet.display_name if a.assigned_vet else "",
+            },
         }
         for a in qs
     ]
     return JsonResponse(data, safe=False)
+
+
+@login_required
+@require_POST
+def reschedule(request):
+    """Sürükle-bırak/yeniden boyutlandırma ile randevu tarih/süre güncelleme."""
+    appt = get_object_or_404(Appointment, pk=request.POST.get("id"))
+    start = parse_datetime(request.POST.get("start") or "")
+    if not start:
+        return JsonResponse({"ok": False, "error": "geçersiz tarih"}, status=400)
+    appt.starts_at = start
+    if end := parse_datetime(request.POST.get("end") or ""):
+        minutes = int((end - start).total_seconds() // 60)
+        if minutes > 0:
+            appt.duration_min = minutes
+    appt.save()
+    return JsonResponse({"ok": True})
 
 
 class AppointmentCreateView(LoginRequiredMixin, CreateView):

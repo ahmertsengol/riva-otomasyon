@@ -742,6 +742,30 @@ def test_walk_in_owner_live_search_finds_owner(auth_client, db):
     assert "Arama Hedef" in res, f"Arama '{param}' parametresiyle sahibi bulamadı"
 
 
+def test_appointment_reschedule_drag(auth_client, admin_user, db):
+    """Takvimde sürükle-bırak → randevu tarihi/süresi güncellenir."""
+    from apps.appointments.models import Appointment
+
+    owner = Owner.objects.create(first_name="Takvim", last_name="Test", phone="0533 9")
+    sp = Species.objects.create(name="Kedi")
+    pet = Patient.objects.create(owner=owner, name="Mia", species=sp)
+    appt = Appointment.objects.create(
+        owner=owner, patient=pet, starts_at=timezone.now(), duration_min=30,
+    )
+    new_start = (timezone.now() + timedelta(days=2)).replace(microsecond=0)
+    resp = auth_client.post(reverse("appointments:reschedule"), {
+        "id": appt.pk,
+        "start": new_start.isoformat(),
+        "end": (new_start + timedelta(minutes=45)).isoformat(),
+    })
+    assert resp.status_code == 200 and resp.json()["ok"] is True
+    appt.refresh_from_db()
+    assert abs((appt.starts_at - new_start).total_seconds()) < 60
+    assert appt.duration_min == 45
+    # takvim sayfası render
+    assert auth_client.get(reverse("appointments:calendar")).status_code == 200
+
+
 def test_start_exam_from_appointment(auth_client, admin_user, db):
     """Randevudan 'Muayeneye Al': durum in_exam + muayene açılır, ikinci kez tekrar açmaz."""
     from apps.appointments.models import Appointment

@@ -20,8 +20,14 @@
       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
 {% if request.user.is_authenticated %}
-<div class="min-h-full lg:grid lg:grid-cols-[16rem_1fr]"
+<div id="app-layout" class="min-h-full lg:grid lg:grid-cols-[16rem_1fr]"
      x-data="{ sidebar: false }">
+  <script>
+    // Sol menü daraltma durumu SAYFA BAZLI saklanır (her sayfanın kendi tercihi).
+    if (localStorage.getItem('sidebarCollapsed:' + location.pathname) === '1') {
+      document.getElementById('app-layout').classList.add('sidebar-collapsed');
+    }
+  </script>
 
   {# ---------------- Sol menü ---------------- #}
   <aside class="hidden lg:flex lg:flex-col border-r border-slate-200 bg-white">
@@ -40,7 +46,7 @@
   <div class="flex flex-col min-h-screen">
     {% include "partials/_topbar.html" %}
 
-    <main class="flex-1 px-4 sm:px-6 py-5 max-w-[1400px] w-full mx-auto">
+    <main class="flex-1 px-4 sm:px-6 py-5 w-full mx-auto {% block main_width %}max-w-[1400px]{% endblock %}">
       {% include "partials/_messages.html" %}
       {% block content %}{% endblock %}
     </main>
@@ -55,6 +61,18 @@
 {% endif %}
 
 <style>[x-cloak]{display:none!important}</style>
+<script>
+  // Sol menüyü daralt/genişlet (durum localStorage'da saklanır, sayfalar arası kalır)
+  window.toggleSidebar = function () {
+    const l = document.getElementById('app-layout');
+    if (!l) return;
+    l.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sidebarCollapsed:' + location.pathname,
+      l.classList.contains('sidebar-collapsed') ? '1' : '0');
+    // Animasyon (0.22s) bitince içerik (takvim vb.) yeni genişliğe göre yeniden boyutlansın
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 240);
+  };
+</script>
 {% block extra_js %}{% endblock %}
 <script>
   if ('serviceWorker' in navigator) {
