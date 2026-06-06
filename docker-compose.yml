@@ -59,10 +59,7 @@ services:
   # Günlük otomatik yedek: pg_dump → ./backups (14 günden eskileri silinir)
   backup:
     image: postgres:16
-    entrypoint:
-      - sh
-      - -c
-      - "while true; do PGPASSWORD=${DB_PASSWORD:-riva} pg_dump -h db -U riva -d riva -Fc -f /backups/riva_$$(date +%F_%H%M).dump && echo \"[backup] OK $$(date)\" || echo '[backup] HATA'; find /backups -name 'riva_*.dump' -mtime +14 -delete; sleep 86400; done"
+    entrypoint: ["sh", "-c", "while true; do PGPASSWORD=${DB_PASSWORD:-riva} pg_dump -h db -U riva -d riva -Fc -f /backups/riva_$$(date +%F_%H%M).dump && echo BACKUP_OK || echo BACKUP_FAIL; find /backups -name 'riva_*.dump' -mtime +14 -delete; sleep 86400; done"]
     volumes:
       - ./backups:/backups
     depends_on:
