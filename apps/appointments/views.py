@@ -238,6 +238,7 @@ class AppointmentUpdateView(LoginRequiredMixin, UpdateView):
 class AppointmentDeleteView(LoginRequiredMixin, DeleteView):
     model = Appointment
     template_name = "appointments/confirm_delete.html"
+    context_object_name = "appt"
     success_url = reverse_lazy("appointments:calendar")
 
     def form_valid(self, form):

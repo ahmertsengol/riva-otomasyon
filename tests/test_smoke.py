@@ -178,6 +178,27 @@ def test_appointment_status_and_request_flow(auth_client, db):
     assert auth_client.get(reverse("appointments:request_list")).status_code == 200
 
 
+def test_appointment_delete_confirmation_and_post(auth_client, db):
+    owner = Owner.objects.create(first_name="Sil", last_name="Test", phone="0503")
+    species = Species.objects.create(name="Kedi")
+    patient = Patient.objects.create(owner=owner, name="Yanlis", species=species)
+    appt = Appointment.objects.create(
+        owner=owner,
+        patient=patient,
+        starts_at=timezone.now() + timedelta(days=1),
+        status=Appointment.Status.CONFIRMED,
+    )
+
+    confirm = auth_client.get(reverse("appointments:delete", args=[appt.pk]))
+    assert confirm.status_code == 200
+    assert "Randevuyu sil" in confirm.content.decode()
+    assert reverse("appointments:detail", args=[appt.pk]) in confirm.content.decode()
+
+    deleted = auth_client.post(reverse("appointments:delete", args=[appt.pk]))
+    assert deleted.status_code == 302
+    assert not Appointment.objects.filter(pk=appt.pk).exists()
+
+
 def test_examination_create_detail_and_patient_timeline(auth_client, admin_user, db):
     owner = Owner.objects.create(first_name="Muayene", last_name="Sahibi", phone="0504")
     species = Species.objects.create(name="Kuş")
