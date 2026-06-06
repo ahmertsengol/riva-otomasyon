@@ -134,6 +134,7 @@ class OwnerUpdateView(LoginRequiredMixin, UpdateView):
 class OwnerDeleteView(LoginRequiredMixin, DeleteView):
     model = Owner
     template_name = "owners/confirm_delete.html"
+    context_object_name = "owner"
     success_url = reverse_lazy("owners:list")
 
     def form_valid(self, form):

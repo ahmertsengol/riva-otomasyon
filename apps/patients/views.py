@@ -165,6 +165,7 @@ class PatientUpdateView(LoginRequiredMixin, UpdateView):
 class PatientDeleteView(LoginRequiredMixin, DeleteView):
     model = Patient
     template_name = "patients/confirm_delete.html"
+    context_object_name = "patient"
     success_url = reverse_lazy("patients:list")
 
     def form_valid(self, form):

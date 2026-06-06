@@ -67,6 +67,20 @@ def test_owner_list_and_create(auth_client, db):
     assert auth_client.get(reverse("owners:detail", args=[owner.pk])).status_code == 200
 
 
+def test_owner_delete_confirmation_and_post(auth_client, db):
+    owner = Owner.objects.create(first_name="Sil", last_name="Sahip", phone="0500")
+
+    confirm = auth_client.get(reverse("owners:delete", args=[owner.pk]))
+    body = confirm.content.decode()
+    assert confirm.status_code == 200
+    assert "Sahip kaydını sil" in body
+    assert reverse("owners:detail", args=[owner.pk]) in body
+
+    deleted = auth_client.post(reverse("owners:delete", args=[owner.pk]))
+    assert deleted.status_code == 302
+    assert not Owner.objects.filter(pk=owner.pk).exists()
+
+
 def test_patient_create_and_detail(auth_client, db):
     owner = Owner.objects.create(first_name="A", last_name="B", phone="0501")
     sp = Species.objects.create(name="Kedi")
@@ -77,6 +91,22 @@ def test_patient_create_and_detail(auth_client, db):
     assert resp.status_code == 302
     patient = Patient.objects.get(name="Minnoş")
     assert auth_client.get(reverse("patients:detail", args=[patient.pk])).status_code == 200
+
+
+def test_patient_delete_confirmation_and_post(auth_client, db):
+    owner = Owner.objects.create(first_name="Sil", last_name="Hasta", phone="0501")
+    sp = Species.objects.create(name="Kedi")
+    patient = Patient.objects.create(owner=owner, name="Yanlis", species=sp)
+
+    confirm = auth_client.get(reverse("patients:delete", args=[patient.pk]))
+    body = confirm.content.decode()
+    assert confirm.status_code == 200
+    assert "Hayvan kaydını sil" in body
+    assert reverse("patients:detail", args=[patient.pk]) in body
+
+    deleted = auth_client.post(reverse("patients:delete", args=[patient.pk]))
+    assert deleted.status_code == 302
+    assert not Patient.objects.filter(pk=patient.pk).exists()
 
 
 def test_search_page(auth_client, db):
