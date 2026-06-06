@@ -458,7 +458,11 @@ def test_reminder_generation_and_queue_flow(auth_client, admin_user, db):
     assert generate_reminders()["total"] == 0
 
     # kuyruk + işaretleme
-    assert auth_client.get(reverse("reminders:queue")).status_code == 200
+    queue_page = auth_client.get(reverse("reminders:queue"))
+    queue_body = queue_page.content.decode()
+    assert queue_page.status_code == 200
+    assert "Tümünü seç" in queue_body
+    assert "reminder-select-all" in queue_body
     assert auth_client.get(reverse("reminders:templates")).status_code == 200
     resp = auth_client.post(reverse("reminders:mark_sent", args=[msg.pk]))
     assert resp.status_code == 302

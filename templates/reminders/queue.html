@@ -22,11 +22,19 @@
   {% endfor %}
 </div>
 
-<form method="post" action="{% url 'reminders:bulk_mark_sent' %}">
+<form method="post" action="{% url 'reminders:bulk_mark_sent' %}" id="reminder-bulk-form">
   {% csrf_token %}
   {% if active_status == 'pending' and messages_list %}
-  <div class="flex justify-end mb-2">
-    <button class="btn btn-secondary btn-sm">Seçilenleri gönderildi işaretle</button>
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+    <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+      <input id="reminder-select-all" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-brand-600">
+      <span>Tümünü seç</span>
+      <span id="reminder-selected-count" class="text-xs font-normal text-slate-400">(0 seçili)</span>
+    </label>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" id="reminder-clear-selection" class="btn btn-ghost btn-sm">Seçimi temizle</button>
+      <button class="btn btn-secondary btn-sm">Seçilenleri gönderildi işaretle</button>
+    </div>
   </div>
   {% endif %}
 
@@ -34,7 +42,7 @@
     {% for m in messages_list %}
     <div class="card card-pad flex flex-wrap items-start gap-3">
       {% if active_status == 'pending' %}
-      <input type="checkbox" name="ids" value="{{ m.pk }}" class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600">
+      <input type="checkbox" name="ids" value="{{ m.pk }}" class="js-reminder-checkbox mt-1 h-4 w-4 rounded border-slate-300 text-brand-600">
       {% endif %}
       <div class="flex-1 min-w-[14rem]">
         <div class="flex items-center gap-2 flex-wrap">
@@ -79,5 +87,40 @@
   {% endif %}
   {% endfor %}
 </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if active_status == 'pending' and messages_list %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const selectAll = document.getElementById('reminder-select-all');
+  const clearSelection = document.getElementById('reminder-clear-selection');
+  const count = document.getElementById('reminder-selected-count');
+  const boxes = Array.from(document.querySelectorAll('.js-reminder-checkbox'));
+  if (!selectAll || !clearSelection || !count || boxes.length === 0) return;
+
+  function refresh() {
+    const checked = boxes.filter((box) => box.checked).length;
+    count.textContent = '(' + checked + ' seçili)';
+    selectAll.checked = checked === boxes.length;
+    selectAll.indeterminate = checked > 0 && checked < boxes.length;
+  }
+
+  selectAll.addEventListener('change', function () {
+    boxes.forEach((box) => { box.checked = selectAll.checked; });
+    refresh();
+  });
+
+  clearSelection.addEventListener('click', function () {
+    boxes.forEach((box) => { box.checked = false; });
+    refresh();
+  });
+
+  boxes.forEach((box) => box.addEventListener('change', refresh));
+  refresh();
+});
+</script>
 {% endif %}
 {% endblock %}
