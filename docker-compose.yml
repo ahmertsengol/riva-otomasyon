@@ -60,14 +60,7 @@ services:
   backup:
     image: postgres:16
     entrypoint: ["sh", "-c"]
-    command: >
-      'while true; do
-         echo "[backup] $(date) pg_dump...";
-         PGPASSWORD=${DB_PASSWORD:-riva} pg_dump -h db -U riva -d riva -Fc
-           -f /backups/riva_$(date +%F_%H%M).dump || echo "[backup] HATA";
-         find /backups -name "riva_*.dump" -mtime +14 -delete;
-         sleep 86400;
-       done'
+    command: "while true; do PGPASSWORD=${DB_PASSWORD:-riva} pg_dump -h db -U riva -d riva -Fc -f /backups/riva_$$(date +%F_%H%M).dump && echo \"[backup] OK $$(date)\" || echo '[backup] HATA'; find /backups -name 'riva_*.dump' -mtime +14 -delete; sleep 86400; done"
     volumes:
       - ./backups:/backups
     depends_on:
