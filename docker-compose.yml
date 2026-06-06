@@ -78,6 +78,10 @@ services:
   # Oto-güncelleyici: GHCR'ı periyodik kontrol eder, yeni imaj varsa web'i yeniler
   watchtower:
     image: containrrr/watchtower
+    # Yeni Docker Desktop motoruyla uyum: istemci API sürümünü sabitle
+    # (aksi halde "client version 1.25 is too old" hatasıyla sürekli yeniden başlar).
+    environment:
+      DOCKER_API_VERSION: "1.41"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --interval 60 --label-enable --cleanup --include-restarting
