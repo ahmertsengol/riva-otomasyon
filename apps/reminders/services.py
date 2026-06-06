@@ -11,6 +11,14 @@ from apps.core.models import ClinicSettings
 from .models import MessageTemplate, OutboundMessage, ReminderRule, render_body
 from .providers import get_provider
 
+# Protokol kategorisi → şablon anahtarı öneki (ör. "ic-parazit-yaklasan")
+CATEGORY_TEMPLATE_PREFIX = {
+    "vaccine": "asi",
+    "internal_parasite": "ic-parazit",
+    "external_parasite": "dis-parazit",
+    "medication": "ilac",
+}
+
 
 def build_context(owner=None, patient=None, *, clinic_name=None, date="", time="",
                   vaccine="", amount="") -> dict:
@@ -113,18 +121,24 @@ def generate_reminders(today=None) -> dict:
             ):
                 created["appointment"] += 1
 
-    # --- Aşı kuralları → duruma göre "asi-yaklasan" / "asi-geciken" ---
+    # --- Koruyucu/tedavi kuralları (aşı + iç/dış parazit + ilaç) → kategoriye göre metin ---
+    # Hepsi VaccineRecord.next_due_at ile izlenir; şablon kategori + duruma göre seçilir.
     for rule in ReminderRule.objects.filter(
         active=True, type=MessageTemplate.Type.VACCINE, template__active=True
     ).select_related("template"):
         target_date = today + timedelta(days=rule.offset_days)
         # offset negatifse tarih geçmiştedir → geciken metni
-        state_key = "asi-geciken" if rule.offset_days < 0 else "asi-yaklasan"
-        template = get_template(state_key) or rule.template
+        state = "geciken" if rule.offset_days < 0 else "yaklasan"
         records = VaccineRecord.objects.filter(next_due_at=target_date).select_related(
             "patient", "patient__owner", "patient__species", "vaccine_definition"
         )
         for record in records:
+            prefix = CATEGORY_TEMPLATE_PREFIX.get(record.category or "vaccine", "asi")
+            template = (
+                get_template(f"{prefix}-{state}")
+                or get_template(f"asi-{state}")
+                or rule.template
+            )
             body = render_body(template.body, build_context(
                 record.patient.owner, record.patient, clinic_name=clinic_name,
                 date=record.next_due_at.strftime("%d.%m.%Y") if record.next_due_at else "",

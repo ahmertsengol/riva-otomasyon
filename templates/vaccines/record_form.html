@@ -1,15 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Aşı Uygula · {{ clinic.name }}{% endblock %}
+{% block title %}Protokol Uygula (Aşı / Parazit / İlaç) · {{ clinic.name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto">
   <div class="flex items-center gap-2 mb-5">
     <a href="{% if form.initial.patient %}{% url 'patients:detail' form.initial.patient %}{% else %}{% url 'vaccines:upcoming' %}{% endif %}" class="btn btn-ghost px-2">‹</a>
-    <h1 class="page-title">Aşı Uygula</h1>
+    <h1 class="page-title">Protokol Uygula</h1>
   </div>
 
   <form method="post" class="card card-pad space-y-4">
     {% csrf_token %}
+    {% if request.GET.appointment %}<input type="hidden" name="appointment" value="{{ request.GET.appointment }}">{% endif %}
     {% if form.non_field_errors %}<div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
     <div class="grid md:grid-cols-2 gap-4">
       {% include "partials/_field.html" with field=form.patient %}

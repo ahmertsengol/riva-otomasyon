@@ -12,6 +12,7 @@ urlpatterns = [
     path("toplu-gonderildi/", views.bulk_mark_sent, name="bulk_mark_sent"),
     path("<int:pk>/gonderildi/", views.mark_sent, name="mark_sent"),
     path("<int:pk>/iptal/", views.cancel, name="cancel"),
+    path("<int:pk>/randevu/", views.create_appointment, name="create_appointment"),
     # Şablonlar & kurallar
     path("sablonlar/", views.templates_and_rules, name="templates"),
     path("sablonlar/yeni/", views.MessageTemplateCreateView.as_view(), name="template_create"),

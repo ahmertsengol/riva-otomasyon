@@ -12,11 +12,21 @@ class Appointment(BaseModel):
     class Type(models.TextChoices):
         GENERAL = "general", "Genel muayene"
         VACCINE = "vaccine", "Aşı"
+        PARASITE = "parasite", "Parazit"
+        MEDICATION = "medication", "İlaç / Tedavi"
         CONTROL = "control", "Kontrol"
         EMERGENCY = "emergency", "Acil"
         SURGERY = "surgery", "Cerrahi"
         CONSULT = "consult", "Danışma"
         OTHER = "other", "Diğer"
+
+    # Protokol kategorisi → randevu tipi (otomatik sonraki doz randevusu için)
+    CATEGORY_TO_TYPE = {
+        "vaccine": "vaccine",
+        "internal_parasite": "parasite",
+        "external_parasite": "parasite",
+        "medication": "medication",
+    }
 
     class Status(models.TextChoices):
         REQUESTED = "requested", "Talep geldi"
@@ -57,6 +67,16 @@ class Appointment(BaseModel):
         related_name="appointments",
         verbose_name="atanan hekim",
     )
+    # Otomatik sonraki-doz randevusunun hangi protokol/doz için olduğunu taşır
+    protocol_definition = models.ForeignKey(
+        "vaccines.VaccineDefinition",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="appointments",
+        verbose_name="protokol",
+    )
+    dose_number = models.PositiveSmallIntegerField("doz no", null=True, blank=True)
     note = models.TextField("not", blank=True)
     reminder_enabled = models.BooleanField(
         "hatırlatma oluştur", default=True,
@@ -93,6 +113,20 @@ class Appointment(BaseModel):
     @property
     def color(self) -> str:
         return self.STATUS_TONE.get(self.status, "#0d9488")
+
+    @property
+    def protocol_label(self) -> str:
+        """Aşı/parazit/ilaç randevusu için net etiket: 'Karma Aşı 2. doz'."""
+        if self.protocol_definition_id:
+            base = self.protocol_definition.name
+            if self.dose_number:
+                return f"{base} {self.dose_number}. doz"
+            return base
+        return self.get_type_display()
+
+    @property
+    def is_protocol(self) -> bool:
+        return self.type in {self.Type.VACCINE, self.Type.PARASITE, self.Type.MEDICATION}
 
 
 class AppointmentRequest(BaseModel):

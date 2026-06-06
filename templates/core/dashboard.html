@@ -4,8 +4,8 @@
 {% block content %}
 <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
   <div>
-    <h1 class="page-title">Panel</h1>
-    <p class="text-sm text-slate-500">{{ today|date:"d F Y, l" }} · Günlük operasyon özeti</p>
+    <h1 class="page-title">Günaydın 👋</h1>
+    <p class="text-sm text-slate-500">{{ today|date:"d F Y, l" }} · Bugünün özeti</p>
   </div>
   <div class="flex flex-wrap gap-2">
     <a href="{% url 'appointments:walk_in' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="stethoscope" %}Hızlı Hasta Kabul</a>
@@ -13,54 +13,145 @@
   </div>
 </div>
 
-{# Randevusuz gelen hasta için tek tıkla başlat #}
-<a href="{% url 'appointments:walk_in' %}"
-   class="flex sm:hidden items-center justify-center gap-2 btn btn-primary w-full mb-4">
-  {% include "partials/_icon.html" with name="stethoscope" %}Randevusuz Hasta Kabul
-</a>
-
 {# ---- Özet kartları ---- #}
 <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
   {% include "core/_stat.html" with label="Bugünkü Randevu" value=cards.appointments_today icon="calendar" tone="brand" href="/randevular/" %}
   {% include "core/_stat.html" with label="Bekleyen Talep" value=cards.pending_requests icon="inbox" tone="warning" href="/randevu-talepleri/" %}
-  {% include "core/_stat.html" with label="Yaklaşan Aşı" value=cards.upcoming_vaccines icon="syringe" tone="info" href="/asilar/yaklasan/" %}
-  {% include "core/_stat.html" with label="Geciken Aşı" value=cards.overdue_vaccines icon="syringe" tone="danger" href="/asilar/geciken/" %}
-  {% include "core/_stat.html" with label="Bugünkü Muayene" value=cards.exams_today icon="stethoscope" tone="neutral" %}
-  {% include "core/_stat.html" with label="Yeni Müşteri (bugün)" value=cards.new_owners icon="users" tone="neutral" %}
-  {% include "core/_stat.html" with label="Yeni Hayvan (bugün)" value=cards.new_patients icon="paw" tone="neutral" %}
+  {% include "core/_stat.html" with label="Yaklaşan (aşı/parazit)" value=cards.upcoming_vaccines icon="syringe" tone="info" href="/asilar/yaklasan/" %}
+  {% include "core/_stat.html" with label="Geciken (aşı/parazit)" value=cards.overdue_vaccines icon="syringe" tone="danger" href="/asilar/geciken/" %}
   {% include "core/_stat.html" with label="Gönderilecek Hatırlatma" value=cards.pending_messages icon="bell" tone="info" href="/hatirlatmalar/" %}
-  {% include "core/_stat.html" with label="Başarısız Mesaj" value=cards.failed_messages icon="bell" tone="danger" href="/hatirlatmalar/" %}
-  {% include "core/_stat.html" with label="Günlük Tahsilat" value=cards.todays_collection icon="wallet" tone="success" money=True %}
 </div>
 
-{# ---- Bugünkü randevular ---- #}
+{# ---- Bugün / Yarın ---- #}
+<div class="grid lg:grid-cols-2 gap-4 mb-4">
+  {# Bugün #}
+  <div class="card">
+    <div class="card-pad flex items-center justify-between border-b border-slate-100">
+      <h2 class="font-semibold text-slate-800">Bugün</h2>
+      <a href="/randevular/" class="btn btn-secondary btn-sm">Takvim</a>
+    </div>
+    <div class="divide-y divide-slate-100">
+      {% for a in today_appointments %}
+      <a href="{% url 'appointments:detail' a.pk %}" class="flex items-center gap-3 px-4 py-2.5 hover:bg-brand-50/40">
+        <span class="text-sm font-semibold text-slate-900 w-12 shrink-0">{{ a.starts_at|time:"H:i" }}</span>
+        <span class="flex-1 min-w-0">
+          <span class="font-medium text-slate-800">{{ a.patient.name }}</span>
+          <span class="text-xs text-slate-500"> · {{ a.protocol_label }}</span>
+          <span class="block text-xs text-slate-400 truncate">{{ a.owner.full_name }}</span>
+        </span>
+        {% include "partials/_status_badge.html" with status=a.status label=a.get_status_display %}
+      </a>
+      {% empty %}
+      <div class="px-4 py-8 text-center text-sm text-slate-400">Bugün için randevu yok.</div>
+      {% endfor %}
+    </div>
+    {% if due_today %}
+    <div class="card-pad border-t border-slate-100">
+      <div class="section-title mb-2">Bugün zamanı gelenler (aşı / parazit / ilaç)</div>
+      <div class="space-y-1.5">
+        {% for r in due_today %}
+        <div class="flex items-center gap-2 text-sm">
+          <span class="badge badge-warning shrink-0">{{ r.vaccine_definition.get_category_display|default:"Aşı" }}</span>
+          <span class="flex-1 min-w-0 truncate"><span class="font-medium">{{ r.patient.name }}</span> · {{ r.display_name }} <span class="text-slate-400">— {{ r.patient.owner.full_name }}</span></span>
+          <a href="{% url 'vaccines:record_create' %}?patient={{ r.patient.pk }}{% if r.vaccine_definition_id %}&definition={{ r.vaccine_definition_id }}{% endif %}" class="btn btn-secondary btn-sm">Uygula</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Yarın #}
+  <div class="card">
+    <div class="card-pad flex items-center justify-between border-b border-slate-100">
+      <h2 class="font-semibold text-slate-800">Yarın <span class="text-sm font-normal text-slate-400">· {{ tomorrow|date:"d F" }}</span></h2>
+      <form method="post" action="{% url 'reminders:generate' %}">{% csrf_token %}
+        <button class="btn btn-primary btn-sm">{% include "partials/_icon.html" with name="bell" %}Yarınkileri hazırla</button>
+      </form>
+    </div>
+    <div class="divide-y divide-slate-100">
+      {% for a in tomorrow_appointments %}
+      <a href="{% url 'appointments:detail' a.pk %}" class="flex items-center gap-3 px-4 py-2.5 hover:bg-brand-50/40">
+        <span class="text-sm font-semibold text-slate-900 w-12 shrink-0">{{ a.starts_at|time:"H:i" }}</span>
+        <span class="flex-1 min-w-0">
+          <span class="font-medium text-slate-800">{{ a.patient.name }}</span>
+          <span class="text-xs text-slate-500"> · {{ a.protocol_label }}</span>
+          <span class="block text-xs text-slate-400 truncate">{{ a.owner.full_name }} · {{ a.phone_snapshot }}</span>
+        </span>
+        {% include "partials/_status_badge.html" with status=a.status label=a.get_status_display %}
+      </a>
+      {% empty %}
+      <div class="px-4 py-8 text-center text-sm text-slate-400">Yarın için randevu yok.</div>
+      {% endfor %}
+    </div>
+    {% if due_tomorrow %}
+    <div class="card-pad border-t border-slate-100">
+      <div class="section-title mb-2">Yarın zamanı gelenler</div>
+      <div class="space-y-1.5">
+        {% for r in due_tomorrow %}
+        <div class="flex items-center gap-2 text-sm">
+          <span class="badge badge-info shrink-0">{{ r.vaccine_definition.get_category_display|default:"Aşı" }}</span>
+          <span class="flex-1 min-w-0 truncate"><span class="font-medium">{{ r.patient.name }}</span> · {{ r.display_name }} <span class="text-slate-400">— {{ r.patient.owner.full_name }}</span></span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ---- Gönderilecek hatırlatmalar ---- #}
 <div class="card">
   <div class="card-pad flex items-center justify-between border-b border-slate-100">
-    <h2 class="font-semibold text-slate-800">Bugünkü Randevular</h2>
-    <a href="/randevular/" class="btn btn-secondary btn-sm">Takvim</a>
+    <h2 class="font-semibold text-slate-800">Gönderilecek Hatırlatmalar</h2>
+    <a href="/hatirlatmalar/" class="btn btn-secondary btn-sm">Tümü</a>
   </div>
-  {% if today_appointments %}
-  <div class="overflow-x-auto">
-    <table class="table">
-      <thead><tr>
-        <th>Saat</th><th>Hayvan</th><th>Sahip</th><th>Tür</th><th>Hekim</th><th>Durum</th>
-      </tr></thead>
-      <tbody>
-        {% for a in today_appointments %}
-        <tr>
-          <td class="font-medium text-slate-900">{{ a.starts_at|time:"H:i" }}</td>
-          <td>{{ a.patient.name }}</td>
-          <td>{{ a.owner.full_name }}</td>
-          <td>{{ a.get_type_display }}</td>
-          <td>{{ a.assigned_vet.display_name|default:"—" }}</td>
-          <td>{% include "partials/_status_badge.html" with status=a.status label=a.get_status_display %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {% if pending_reminders %}
+  <div class="divide-y divide-slate-100">
+    {% for m in pending_reminders %}
+    <div class="flex items-center gap-3 px-4 py-2.5">
+      <span class="badge {% if m.kind == 'vaccine' %}badge-warning{% elif m.kind == 'appointment' %}badge-info{% else %}badge-neutral{% endif %} shrink-0">{{ m.get_kind_display }}</span>
+      <span class="flex-1 min-w-0">
+        <span class="font-medium text-slate-800">{{ m.owner.full_name }}</span>
+        {% if m.patient %}<span class="text-xs text-slate-400"> · {{ m.patient.name }}</span>{% endif %}
+        <span class="block text-xs text-slate-400 truncate">{{ m.body }}</span>
+      </span>
+      {% if m.wa_link %}<a href="{{ m.wa_link }}" target="_blank" class="btn btn-primary btn-sm shrink-0">{% include "partials/_icon.html" with name="bell" %}Gönder</a>{% endif %}
+    </div>
+    {% endfor %}
   </div>
   {% else %}
-  <div class="card-pad text-center text-slate-400 py-10">Bugün için randevu yok.</div>
+  <div class="px-4 py-8 text-center text-sm text-slate-400">Gönderilmeyi bekleyen hatırlatma yok. "Yarınkileri hazırla" ile üretebilirsin.</div>
   {% endif %}
 </div>
+
+{# ---- Sabah bildirimi (tarayıcı): günde bir kez özet ---- #}
+<script>
+(function () {
+  if (!("Notification" in window)) return;
+  var key = "briefingNotified:" + "{{ today|date:'Y-m-d' }}";
+  if (localStorage.getItem(key)) return;
+  var appts = {{ today_appointments|length }};
+  var due = {{ due_today|length }};
+  var pending = {{ pending_reminders|length }};
+  if (appts + due + pending === 0) return;
+
+  function show() {
+    var parts = [];
+    if (appts) parts.push(appts + " randevu");
+    if (due) parts.push(due + " aşı/parazit/ilaç");
+    if (pending) parts.push(pending + " gönderilecek hatırlatma");
+    new Notification("Bugün · {{ clinic.name|default:'Riva Veteriner' }}", {
+      body: parts.join(" · "),
+      icon: "{% load static %}{% static 'img/icon-192.png' %}",
+    });
+    localStorage.setItem(key, "1");
+  }
+  if (Notification.permission === "granted") {
+    show();
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then(function (p) { if (p === "granted") show(); });
+  }
+})();
+</script>
 {% endblock %}

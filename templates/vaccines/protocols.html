@@ -1,32 +1,39 @@
 {% extends "base.html" %}
-{% block title %}Aşı Protokolleri · {{ clinic.name }}{% endblock %}
+{% block title %}Protokoller · {{ clinic.name }}{% endblock %}
 
 {% block content %}
 <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
   <div>
-    <h1 class="page-title">Aşı Protokolleri</h1>
-    <p class="text-sm text-slate-500 mt-1">Başlangıç protokolleri örnek amaçlıdır; klinik kendi protokolünü doğrulamalı ve düzenlemelidir.</p>
+    <h1 class="page-title">Protokoller</h1>
+    <p class="text-sm text-slate-500 mt-1">Aşı · İç/Dış Parazit · İlaç. Başlangıç protokolleri örnektir; klinik kendi protokolünü doğrulayıp düzenlemelidir.</p>
   </div>
   <a href="{% url 'vaccines:protocol_create' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="plus" %}Yeni Protokol</a>
 </div>
 
-<div class="card overflow-x-auto">
-  <table class="table">
-    <thead><tr><th>Tür</th><th>Aşı</th><th>İlk Doz</th><th>Tekrar</th><th>Hatırlatma</th><th>Durum</th></tr></thead>
-    <tbody>
-      {% for protocol in protocols %}
-      <tr class="cursor-pointer" onclick="window.location='{% url 'vaccines:protocol_update' protocol.pk %}'">
-        <td>{{ protocol.species.name }}</td>
-        <td class="font-medium text-slate-900">{{ protocol.name }}</td>
-        <td>{{ protocol.first_dose_age_text|default:"—" }}</td>
-        <td>{% if protocol.repeat_interval_days %}{{ protocol.repeat_interval_days }} gün{% else %}—{% endif %}</td>
-        <td>{{ protocol.reminder_offset_days }} gün önce</td>
-        <td>{% if protocol.active %}<span class="badge badge-success">Aktif</span>{% else %}<span class="badge badge-neutral">Pasif</span>{% endif %}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="6" class="text-center text-slate-400 py-10">Henüz aşı protokolü yok.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{% regroup protocols by get_category_display as category_groups %}
+{% for group in category_groups %}
+<div class="mb-5">
+  <h2 class="section-title mb-2">{{ group.grouper }}</h2>
+  <div class="card overflow-x-auto">
+    <table class="table">
+      <thead><tr><th>Tür</th><th>Ad</th><th>İlk Doz</th><th>Seri</th><th>Tekrar</th><th>Hatırlatma</th><th>Durum</th></tr></thead>
+      <tbody>
+        {% for protocol in group.list %}
+        <tr class="cursor-pointer" onclick="window.location='{% url 'vaccines:protocol_update' protocol.pk %}'">
+          <td>{{ protocol.species.name }}</td>
+          <td class="font-medium text-slate-900">{{ protocol.name }}</td>
+          <td>{{ protocol.first_dose_age_text|default:"—" }}</td>
+          <td>{% if protocol.series_doses > 1 %}{{ protocol.series_doses }} doz{% if protocol.series_interval_days %} / {{ protocol.series_interval_days }}g{% endif %}{% else %}tek{% endif %}</td>
+          <td>{% if protocol.repeat_interval_days %}{{ protocol.repeat_interval_days }} gün{% else %}—{% endif %}</td>
+          <td>{{ protocol.reminder_offset_days }} gün önce</td>
+          <td>{% if protocol.active %}<span class="badge badge-success">Aktif</span>{% else %}<span class="badge badge-neutral">Pasif</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+{% empty %}
+<div class="card card-pad text-center text-slate-400 py-10">Henüz protokol yok.</div>
+{% endfor %}
 {% endblock %}

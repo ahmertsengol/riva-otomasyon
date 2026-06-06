@@ -796,3 +796,156 @@ def test_appointment_source_default_scheduled(db, admin_user):
     pet = Patient.objects.create(owner=owner, name="Cik", species=sp)
     appt = Appointment.objects.create(owner=owner, patient=pet, starts_at=timezone.now())
     assert appt.source == Appointment.Source.SCHEDULED
+
+
+def test_protocol_followup_carries_protocol_and_dose(auth_client, admin_user, db):
+    """Aşı uygulanınca oluşan sonraki-doz randevusu protokol + doz + net etiket taşır."""
+    from apps.appointments.models import Appointment
+
+    owner = Owner.objects.create(first_name="Proto", last_name="Kol", phone="0590")
+    sp = Species.objects.create(name="Köpek")
+    pet = Patient.objects.create(owner=owner, name="Paşa", species=sp)
+    d = VaccineDefinition.objects.create(
+        name="Yavru Karma", species=sp, category=VaccineDefinition.Category.VACCINE,
+        series_doses=2, series_interval_days=21, repeat_interval_days=365,
+    )
+    resp = auth_client.post(reverse("vaccines:record_create"), {
+        "patient": pet.pk, "vaccine_definition": d.pk, "vaccine_name": "",
+        "applied_at": timezone.localdate().isoformat(), "next_due_at": "", "vet": admin_user.pk,
+        "serial_lot": "", "expiry_date": "", "note": "", "create_followup": "on",
+    })
+    assert resp.status_code == 302
+    fa = Appointment.objects.get(patient=pet, source=Appointment.Source.AUTO_FOLLOWUP)
+    assert fa.protocol_definition_id == d.pk
+    assert fa.dose_number == 2
+    assert fa.type == Appointment.Type.VACCINE
+    assert fa.protocol_label == "Yavru Karma 2. doz"
+
+
+def test_parasite_category_uses_its_template(db):
+    """İç parazit kaydı için hatırlatma, aşı değil parazit şablonunu kullanır."""
+    from apps.reminders.models import MessageTemplate, ReminderRule
+    from apps.reminders.services import generate_reminders
+
+    owner = Owner.objects.create(first_name="Paraz", last_name="It", phone="0591",
+                                 contact_pref=Owner.ContactPref.WHATSAPP)
+    sp = Species.objects.create(name="Kedi")
+    pet = Patient.objects.create(owner=owner, name="Minik", species=sp)
+    d = VaccineDefinition.objects.create(
+        name="İç Parazit", species=sp,
+        category=VaccineDefinition.Category.INTERNAL_PARASITE, repeat_interval_days=90,
+    )
+    MessageTemplate.objects.create(key="ic-parazit-yaklasan", name="İç Parazit Yaklaşan",
+                                   type=MessageTemplate.Type.VACCINE, body="ICPARAZIT {{pet_name}}")
+    MessageTemplate.objects.create(key="asi-yaklasan", name="Aşı Yaklaşan",
+                                   type=MessageTemplate.Type.VACCINE, body="ASI {{pet_name}}")
+    rec = VaccineRecord.objects.create(
+        patient=pet, vaccine_definition=d, applied_at=timezone.localdate(),
+        next_due_at=timezone.localdate() + timedelta(days=7),
+    )
+    ReminderRule.objects.create(name="yaklasan", type=MessageTemplate.Type.VACCINE, offset_days=7,
+                                template=MessageTemplate.objects.get(key="asi-yaklasan"))
+    generate_reminders()
+    assert rec.messages.first().body.startswith("ICPARAZIT")
+
+
+def test_reminder_create_appointment_action(auth_client, admin_user, db):
+    """Hatırlatma kuyruğundan 'Randevu Oluştur' → protokol+doz taşıyan randevu."""
+    from apps.appointments.models import Appointment
+    from apps.reminders.models import OutboundMessage
+
+    owner = Owner.objects.create(first_name="Mesaj", last_name="Rand", phone="0592",
+                                 contact_pref=Owner.ContactPref.WHATSAPP)
+    sp = Species.objects.create(name="Köpek")
+    pet = Patient.objects.create(owner=owner, name="Rexo", species=sp)
+    d = VaccineDefinition.objects.create(
+        name="Karma", species=sp, category=VaccineDefinition.Category.VACCINE, repeat_interval_days=365,
+    )
+    rec = VaccineRecord.objects.create(
+        patient=pet, vaccine_definition=d, applied_at=timezone.localdate(),
+        next_due_at=timezone.localdate() + timedelta(days=3),
+    )
+    msg = OutboundMessage.objects.create(
+        owner=owner, patient=pet, kind=OutboundMessage.KIND_VACCINE,
+        to_phone=owner.phone, body="x", vaccine_record=rec,
+    )
+    resp = auth_client.post(reverse("reminders:create_appointment", args=[msg.pk]))
+    assert resp.status_code == 302
+    appt = Appointment.objects.get(patient=pet, protocol_definition=d)
+    assert appt.type == Appointment.Type.VACCINE
+    assert appt.dose_number == rec.next_dose_number
+
+
+def test_applying_next_dose_clears_previous_due(db):
+    """Yeni doz uygulanınca eski kaydın 'sonraki tarih'i temizlenir (liste şişmesin)."""
+    sp = Species.objects.create(name="Köpek")
+    owner = Owner.objects.create(first_name="Zincir", last_name="Doz", phone="0594")
+    pet = Patient.objects.create(owner=owner, name="Zeus", species=sp)
+    d = VaccineDefinition.objects.create(
+        name="Karma", species=sp, series_doses=2, series_interval_days=21, repeat_interval_days=365,
+    )
+    r1 = VaccineRecord.objects.create(patient=pet, vaccine_definition=d, applied_at=timezone.localdate())
+    assert r1.next_due_at == timezone.localdate() + timedelta(days=21)
+    VaccineRecord.objects.create(
+        patient=pet, vaccine_definition=d, applied_at=timezone.localdate() + timedelta(days=21),
+    )
+    r1.refresh_from_db()
+    assert r1.next_due_at is None  # 1. doz artık due/overdue'da görünmez
+
+
+def test_apply_from_appointment_completes_it(auth_client, admin_user, db):
+    """Protokol randevusundan 'Uygula' → kayıt açılır ve randevu otomatik 'tamamlandı' olur."""
+    from apps.appointments.models import Appointment
+
+    sp = Species.objects.create(name="Kedi")
+    owner = Owner.objects.create(first_name="Uygu", last_name="La", phone="0595")
+    pet = Patient.objects.create(owner=owner, name="Loki", species=sp)
+    d = VaccineDefinition.objects.create(name="Karma", species=sp, repeat_interval_days=365)
+    appt = Appointment.objects.create(
+        owner=owner, patient=pet, starts_at=timezone.now(), type=Appointment.Type.VACCINE,
+        status=Appointment.Status.REQUESTED, protocol_definition=d, dose_number=1,
+    )
+    resp = auth_client.post(reverse("vaccines:record_create"), {
+        "patient": pet.pk, "vaccine_definition": d.pk, "vaccine_name": "",
+        "applied_at": timezone.localdate().isoformat(), "next_due_at": "", "vet": admin_user.pk,
+        "serial_lot": "", "expiry_date": "", "note": "", "appointment": str(appt.pk),
+    })
+    assert resp.status_code == 302
+    appt.refresh_from_db()
+    assert appt.status == Appointment.Status.COMPLETED
+
+
+def test_protocol_edit_updates_repeat_interval(auth_client, db):
+    """Kullanıcı eklenen aşı/ilaç protokolünü (tekrar aralığı, kategori, hatırlatma) düzenleyebilir."""
+    sp = Species.objects.create(name="Köpek")
+    d = VaccineDefinition.objects.create(
+        name="İç Parazit", species=sp,
+        category=VaccineDefinition.Category.INTERNAL_PARASITE,
+        repeat_interval_days=90, reminder_offset_days=7, series_doses=1,
+    )
+    resp = auth_client.post(reverse("vaccines:protocol_update", args=[d.pk]), {
+        "category": VaccineDefinition.Category.INTERNAL_PARASITE,
+        "name": "İç Parazit", "species": sp.pk, "first_dose_age_text": "",
+        "series_doses": 1, "series_interval_days": "", "repeat_interval_days": 30,
+        "reminder_offset_days": 5, "description": "", "active": "on",
+    })
+    assert resp.status_code == 302
+    d.refresh_from_db()
+    assert d.repeat_interval_days == 30 and d.reminder_offset_days == 5
+    # düzenleme formunda kategori alanı görünür
+    page = auth_client.get(reverse("vaccines:protocol_update", args=[d.pk])).content.decode()
+    assert "id_category" in page
+
+
+def test_dashboard_briefing_shows_tomorrow(auth_client, db):
+    """Sabah brifingi yarınki randevuyu gösterir."""
+    from apps.appointments.models import Appointment
+
+    owner = Owner.objects.create(first_name="Yarin", last_name="Test", phone="0593")
+    sp = Species.objects.create(name="Kedi")
+    pet = Patient.objects.create(owner=owner, name="YarinKedi", species=sp)
+    Appointment.objects.create(owner=owner, patient=pet,
+                               starts_at=timezone.now() + timedelta(days=1))
+    resp = auth_client.get(reverse("core:dashboard"))
+    assert resp.status_code == 200
+    assert "YarinKedi" in resp.content.decode()

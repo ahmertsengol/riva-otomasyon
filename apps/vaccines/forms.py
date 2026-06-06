@@ -12,6 +12,7 @@ class VaccineDefinitionForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = VaccineDefinition
         fields = [
+            "category",
             "name",
             "species",
             "first_dose_age_text",

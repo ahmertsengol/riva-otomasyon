@@ -117,18 +117,40 @@ try/except ile sarar; modül yoksa 0/boş döner. Yeni modül gelince kendiliği
 ## Hatırlatma / Bildirim sistemi
 
 - `reminders.services.generate_reminders()` aktif `ReminderRule`'lara göre yaklaşan randevu (sadece
-  `Appointment.reminder_enabled=True`) ve yaklaşan/geciken aşıları tarayıp `OutboundMessage(pending)` üretir.
+  `Appointment.reminder_enabled=True`) ve yaklaşan/geciken **koruyucu/tedavi kayıtlarını** (aşı + iç/dış
+  parazit + ilaç — hepsi `VaccineRecord.next_due_at`) tarayıp `OutboundMessage(pending)` üretir. Metin
+  **kategoriye göre** seçilir (`CATEGORY_TEMPLATE_PREFIX` → `{prefix}-{yaklasan|geciken}` şablonu).
   **`dedupe_key` ile idempotent.** `manage.py generate_reminders` veya `run_scheduler` ile periyodik çalışır.
-- Hiçbir şey otomatik gönderilmez — kuyruktan admin `wa.me` ile gönderip "Gönderildi" işaretler.
-- Üst bar zili (`_topbar.html`): `action_count = due_reminder_count + pending_request_count`
-  (context processor, her sayfa yüklemesinde hesaplanır; canlı değil).
+  **VACCINE tipi kural TÜM kategorileri tarar** (ayrı parazit/ilaç kuralı gerekmez).
+- Hiçbir şey otomatik gönderilmez — **önce personel kuyrukta görür** (sabah brifingi/Panel + Hatırlatmalar),
+  her satırda `wa.me` "Gönder" + **"Randevu Oluştur"** (`reminders:create_appointment` → ilgili hayvan+sahip,
+  protokol+doz taşır, mükerrer önler). Gönderince "Gönderildi" işaretlenir.
+- Üst bar zili (`_topbar.html`): `action_count = due_reminder_count + pending_request_count`.
 
-## Aşı protokol motoru
+## Sabah brifingi (Panel)
 
-`VaccineDefinition` düzenlenebilir veridir (sabit kod YOK). Çok-doz **birincil seri** (`series_doses`,
-`series_interval_days`) + sonrası **rapel** (`repeat_interval_days`). `VaccineRecord.save` kaçıncı dozda
-olduğunu sayıp `next_due_at`'i hesaplar. Aşı uygulamada (`create_followup` açıksa) sonraki doz için
-**"planlandı" randevu otomatik** oluşur (Karma 1 → Karma 2).
+Giriş sonrası **Panel = sabah brifingi** (`core/dashboard.html`, `dashboard_context`): **Bugün** /
+**Yarın** blokları (randevular + o gün due olan aşı/parazit/ilaç dozları) + **Gönderilecek hatırlatmalar**
+(+ "Yarınkileri hazırla" → `reminders:generate`). Giriş sonrası **tarayıcı bildirimi** günde bir kez özet
+(localStorage gün anahtarı). Context: `today_appointments`, `tomorrow_appointments`, `due_today`,
+`due_tomorrow`, `pending_reminders`.
+
+## Koruyucu/tedavi protokol motoru (aşı + iç/dış parazit + ilaç — TEK motor)
+
+`vaccines` app'i **genel** protokol motorudur (sadece aşı değil). `VaccineDefinition.category`
+(`vaccine`/`internal_parasite`/`external_parasite`/`medication`) ile ayrılır; davranış aynıdır:
+çok-doz **birincil seri** (`series_doses`, `series_interval_days`) + sonrası **rapel**
+(`repeat_interval_days`). `VaccineRecord.save` `next_due_at`'i hesaplar; `record.category`,
+`record.dose_number`, `record.next_dose_number` yardımcıları etiket/followup için.
+
+- **Sonraki doz randevusu otomatik + NET ETİKETLİ.** `create_followup` açıkken
+  `_create_followup_appointment` randevuyu oluştururken `Appointment.protocol_definition` + `dose_number`
+  + kategoriye uygun tipi (`Appointment.CATEGORY_TO_TYPE`) yazar → `appt.protocol_label` = "Karma Aşı 2. doz".
+  Takvim/brifing/detay bunu gösterir.
+- **Randevudan tek tık "Uygula":** protokol randevusu detayında buton → `vaccines:record_create`
+  `?patient=&definition=&appointment=` ile açılır; kayıt oluşunca o randevu `completed`, zincir devam eder.
+- UI: `vaccines/protocols.html` **kategoriye göre bölümlü** (regroup); apply formu tür+kategori filtreli
+  (`definition_options`); menü "Aşı & Koruyucu". Yeni metin: `{ic-parazit,dis-parazit,ilac,asi}-{yaklasan,geciken}` şablonu.
 
 ## Klinik iş akışı (Hızlı Kabul → Muayene → Hesap Kapat)
 
@@ -189,8 +211,9 @@ motoru + seri, hatırlatma kuyruğu + zamanlayıcı + bildirim zili, kasa (işle
 simülasyonu), raporlar, panel, PWA, oto-deploy. Logo entegre.
 Ek olarak: **klinik iş akışı** (Hızlı Kabul → Muayene komuta → tek ekran Hesap Kapat + Muayeneye Al),
 **geliştirilmiş takvim** (sürükle-bırak/filtre/tam genişlik), **sayfa-bazlı daraltılabilir menü**,
-in-app **Şifre Değiştir** ekranı (`accounts:password_change`).
-**Sonraki:** parazit/koruyucu uygulama motoru (aşı motorunu genelleştir), MVP sonrası fazlar (stok, gerçek
-e-fatura, POS, pet hotel, gelişmiş raporlar) — `docs/`.
+in-app **Şifre Değiştir** ekranı (`accounts:password_change`), **sabah brifingi Panel** (bugün/yarın +
+tarayıcı bildirimi), **genelleştirilmiş koruyucu/tedavi protokol motoru** (aşı + iç/dış parazit + ilaç;
+otomatik etiketli sonraki-doz randevusu + randevudan "Uygula" + kuyruktan "Randevu Oluştur").
+**Sonraki:** MVP sonrası fazlar (stok, gerçek e-fatura, POS, pet hotel, gelişmiş raporlar) — `docs/`.
 
-> Not (test): pytest doğrudan çağrılırsa DYLD gerekir; `make test` kullan. Güncel: 29 smoke testi.
+> Not (test): pytest doğrudan çağrılırsa DYLD gerekir; `make test` kullan. Güncel: 36 smoke testi.

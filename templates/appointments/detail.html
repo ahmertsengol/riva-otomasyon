@@ -29,12 +29,26 @@
       <div class="flex justify-between"><dt class="text-slate-500">Hayvan</dt><dd><a href="{% url 'patients:detail' appt.patient.pk %}" class="text-brand-700 hover:underline">{{ appt.patient.name }}</a></dd></div>
       <div class="flex justify-between"><dt class="text-slate-500">Sahip</dt><dd><a href="{% url 'owners:detail' appt.owner.pk %}" class="text-brand-700 hover:underline">{{ appt.owner.full_name }}</a></dd></div>
       <div class="flex justify-between"><dt class="text-slate-500">Telefon</dt><dd>{{ appt.phone_snapshot }}</dd></div>
-      <div class="flex justify-between"><dt class="text-slate-500">Tip</dt><dd>{{ appt.get_type_display }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Tip</dt><dd>{{ appt.protocol_label }}</dd></div>
       <div class="flex justify-between"><dt class="text-slate-500">Süre</dt><dd>{{ appt.duration_min }} dk</dd></div>
       <div class="flex justify-between"><dt class="text-slate-500">Hekim</dt><dd>{{ appt.assigned_vet.display_name|default:"—" }}</dd></div>
     </dl>
     {% if appt.note %}<div class="text-sm text-slate-700 whitespace-pre-line border-t border-slate-100 pt-3">{{ appt.note }}</div>{% endif %}
   </div>
+
+  {# Protokol randevusu (aşı/parazit/ilaç) → o gün ne yapılacağı net + tek tık uygula #}
+  {% if appt.is_protocol and appt.status != 'completed' and appt.status != 'cancelled' %}
+  <div class="card card-pad mt-4 border-brand-200 bg-brand-50/40">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        <div class="section-title">Bu randevuda yapılacak</div>
+        <div class="text-lg font-semibold text-slate-900">{{ appt.protocol_label }} · {{ appt.patient.name }}</div>
+      </div>
+      <a href="{% url 'vaccines:record_create' %}?patient={{ appt.patient.pk }}{% if appt.protocol_definition_id %}&definition={{ appt.protocol_definition_id }}{% endif %}&appointment={{ appt.pk }}"
+         class="btn btn-primary">{% include "partials/_icon.html" with name="syringe" %}Uygula</a>
+    </div>
+  </div>
+  {% endif %}
 
   {# Hızlı durum değiştirme #}
   <div class="card card-pad mt-4">

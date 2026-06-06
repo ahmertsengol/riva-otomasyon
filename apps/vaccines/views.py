@@ -28,6 +28,8 @@ class VaccineRecordCreateView(LoginRequiredMixin, CreateView):
         initial = super().get_initial()
         if patient_id := self.request.GET.get("patient"):
             initial["patient"] = patient_id
+        if def_id := self.request.GET.get("definition"):
+            initial["vaccine_definition"] = def_id
         initial.setdefault("applied_at", timezone.localdate())
         user = self.request.user
         if getattr(user, "is_authenticated", False) and getattr(user, "role", None) in {
@@ -46,7 +48,7 @@ class VaccineRecordCreateView(LoginRequiredMixin, CreateView):
             if patient:
                 defs = defs.filter(species_id=patient.species_id)
         ctx["init_definitions"] = defs
-        ctx["init_def_selected"] = ""
+        ctx["init_def_selected"] = self.request.GET.get("definition", "")
         return ctx
 
     def form_valid(self, form):
@@ -55,23 +57,38 @@ class VaccineRecordCreateView(LoginRequiredMixin, CreateView):
         response = super().form_valid(form)
         if form.cleaned_data.get("create_followup"):
             self._create_followup_appointment(self.object)
-        messages.success(self.request, "Aşı kaydı oluşturuldu.")
+        # Bu kayıt bir protokol randevusundan açıldıysa o randevuyu tamamla
+        # (POST gizli input öncelikli; query string her tarayıcıda korunmayabilir)
+        if appt_id := (self.request.POST.get("appointment") or self.request.GET.get("appointment")):
+            from apps.appointments.models import Appointment
+
+            Appointment.objects.filter(pk=appt_id).update(
+                status=Appointment.Status.COMPLETED
+            )
+        messages.success(self.request, f"{self.object.display_name} kaydı oluşturuldu.")
         return response
 
     def _create_followup_appointment(self, record):
-        """Sonraki doz tarihine 'planlandı' (talep) randevu oluşturur (idempotent)."""
+        """Sonraki doz tarihine 'planlandı' (talep) randevu oluşturur (idempotent).
+
+        Randevu, hangi protokol/doz olduğunu taşır → o gün takvimde/brifingde
+        'Karma Aşı 2. doz · Boncuk' diye net görünür.
+        """
         if not record.next_due_at:
             return
         from datetime import datetime, time
 
-        from django.utils import timezone
-
         from apps.appointments.models import Appointment
 
+        definition = record.vaccine_definition
+        appt_type = Appointment.CATEGORY_TO_TYPE.get(
+            definition.category if definition else "", Appointment.Type.VACCINE
+        )
+        next_dose = record.next_dose_number
         starts_at = timezone.make_aware(datetime.combine(record.next_due_at, time(10, 0)))
         exists = Appointment.objects.filter(
             patient=record.patient,
-            type=Appointment.Type.VACCINE,
+            protocol_definition=definition,
             starts_at__date=record.next_due_at,
         ).exists()
         if exists:
@@ -80,11 +97,13 @@ class VaccineRecordCreateView(LoginRequiredMixin, CreateView):
             owner=record.patient.owner,
             patient=record.patient,
             starts_at=starts_at,
-            type=Appointment.Type.VACCINE,
+            type=appt_type,
             status=Appointment.Status.REQUESTED,
             source=Appointment.Source.AUTO_FOLLOWUP,
             assigned_vet=record.vet,
-            note=f"Otomatik: {record.display_name} sonraki doz",
+            protocol_definition=definition,
+            dose_number=next_dose,
+            note=f"Otomatik: {record.display_name} {next_dose}. doz",
         )
 
 
@@ -116,8 +135,8 @@ class UpcomingVaccineListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["title"] = "Yaklaşan Aşılar"
-        ctx["empty_text"] = "Önümüzdeki 30 gün içinde yaklaşan aşı yok."
+        ctx["title"] = "Yaklaşan (Aşı / Parazit / İlaç)"
+        ctx["empty_text"] = "Önümüzdeki 30 gün içinde yaklaşan uygulama yok."
         ctx["tone"] = "warning"
         return ctx
 
@@ -138,8 +157,8 @@ class OverdueVaccineListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["title"] = "Geciken Aşılar"
-        ctx["empty_text"] = "Geciken aşı yok."
+        ctx["title"] = "Geciken (Aşı / Parazit / İlaç)"
+        ctx["empty_text"] = "Geciken uygulama yok."
         ctx["tone"] = "danger"
         return ctx
 
@@ -160,7 +179,7 @@ class VaccineProtocolCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("vaccines:protocols")
 
     def form_valid(self, form):
-        messages.success(self.request, "Aşı protokolü oluşturuldu.")
+        messages.success(self.request, "Protokol oluşturuldu.")
         return super().form_valid(form)
 
 
@@ -171,7 +190,7 @@ class VaccineProtocolUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy("vaccines:protocols")
 
     def form_valid(self, form):
-        messages.success(self.request, "Aşı protokolü güncellendi.")
+        messages.success(self.request, "Protokol güncellendi.")
         return super().form_valid(form)
 
 

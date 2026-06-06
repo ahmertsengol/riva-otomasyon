@@ -73,6 +73,61 @@ def mark_sent(request, pk):
 
 @login_required
 @require_POST
+def create_appointment(request, pk):
+    """Hatırlatmadan ilgili hayvan+sahip için randevu oluştur (aşı/parazit/ilaç → protokol+doz taşır)."""
+    from datetime import datetime, timedelta
+    from datetime import time as dtime
+
+    from apps.appointments.models import Appointment
+
+    msg = get_object_or_404(
+        OutboundMessage.objects.select_related(
+            "owner", "patient", "vaccine_record", "vaccine_record__vaccine_definition"
+        ),
+        pk=pk,
+    )
+    # Randevu hatırlatmasıysa zaten bir randevuya bağlıdır → mükerrer yaratma, ona git
+    if msg.appointment_id:
+        return redirect("appointments:detail", pk=msg.appointment_id)
+    if not msg.patient_id:
+        messages.error(request, "Bu mesajda hayvan bilgisi yok, randevu oluşturulamadı.")
+        return redirect(request.META.get("HTTP_REFERER") or "reminders:queue")
+
+    vr = msg.vaccine_record
+    definition = vr.vaccine_definition if vr else None
+    if vr and vr.next_due_at:
+        starts_at = timezone.make_aware(datetime.combine(vr.next_due_at, dtime(10, 0)))
+        appt_type = Appointment.CATEGORY_TO_TYPE.get(
+            definition.category if definition else "", Appointment.Type.VACCINE
+        )
+        dose = vr.next_dose_number
+    else:
+        starts_at = timezone.now() + timedelta(days=1)
+        appt_type, dose = Appointment.Type.GENERAL, None
+
+    # Aynı protokol/gün için randevu varsa ona git (mükerrer önle)
+    if definition:
+        existing = Appointment.objects.filter(
+            patient=msg.patient, protocol_definition=definition,
+            starts_at__date=starts_at.date(),
+        ).first()
+        if existing:
+            messages.info(request, "Bu doz için randevu zaten var.")
+            return redirect("appointments:detail", pk=existing.pk)
+
+    appt = Appointment.objects.create(
+        owner=msg.owner, patient=msg.patient, starts_at=starts_at,
+        type=appt_type, status=Appointment.Status.REQUESTED,
+        source=Appointment.Source.AUTO_FOLLOWUP,
+        protocol_definition=definition, dose_number=dose,
+        note="Hatırlatmadan oluşturuldu.",
+    )
+    messages.success(request, "Randevu oluşturuldu.")
+    return redirect("appointments:detail", pk=appt.pk)
+
+
+@login_required
+@require_POST
 def cancel(request, pk):
     msg = get_object_or_404(OutboundMessage, pk=pk)
     msg.status = OutboundMessage.CANCELLED

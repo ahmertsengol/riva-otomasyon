@@ -5,7 +5,7 @@
 <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
   <h1 class="page-title">{{ title }}</h1>
   <div class="flex gap-2">
-    <a href="{% url 'vaccines:record_create' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="syringe" %}Aşı Uygula</a>
+    <a href="{% url 'vaccines:record_create' %}" class="btn btn-primary">{% include "partials/_icon.html" with name="syringe" %}Uygula</a>
     <a href="{% url 'vaccines:protocols' %}" class="btn btn-secondary">Protokoller</a>
   </div>
 </div>
@@ -17,11 +17,12 @@
 
 <div class="card overflow-x-auto">
   <table class="table">
-    <thead><tr><th>Tarih</th><th>Aşı</th><th>Hayvan</th><th>Sahip</th><th>Telefon</th><th>Durum</th></tr></thead>
+    <thead><tr><th>Tarih</th><th>Kategori</th><th>Ad</th><th>Hayvan</th><th>Sahip</th><th>Telefon</th><th>Durum</th></tr></thead>
     <tbody>
       {% for record in records %}
       <tr class="cursor-pointer" onclick="window.location='{% url 'vaccines:record_detail' record.pk %}'">
         <td>{{ record.next_due_at|date:"d.m.Y" }}</td>
+        <td><span class="badge badge-neutral">{{ record.vaccine_definition.get_category_display|default:"Aşı" }}</span></td>
         <td class="font-medium text-slate-900">{{ record.display_name }}</td>
         <td>{{ record.patient.name }} <span class="text-slate-400">· {{ record.patient.species.name }}</span></td>
         <td>{{ record.patient.owner.full_name }}</td>
@@ -29,7 +30,7 @@
         <td>{% if record.is_overdue %}<span class="badge badge-danger">Gecikti</span>{% else %}<span class="badge badge-warning">Yaklaşıyor</span>{% endif %}</td>
       </tr>
       {% empty %}
-      <tr><td colspan="6" class="text-center text-slate-400 py-10">{{ empty_text }}</td></tr>
+      <tr><td colspan="7" class="text-center text-slate-400 py-10">{{ empty_text }}</td></tr>
       {% endfor %}
     </tbody>
   </table>

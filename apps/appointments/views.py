@@ -104,7 +104,9 @@ def calendar(request):
 @login_required
 def events(request):
     """FullCalendar için JSON olay akışı (hekim/durum/tip filtreli)."""
-    qs = Appointment.objects.select_related("patient", "owner", "assigned_vet")
+    qs = Appointment.objects.select_related(
+        "patient", "owner", "assigned_vet", "protocol_definition"
+    )
     if start := request.GET.get("start"):
         qs = qs.filter(starts_at__gte=parse_datetime(start))
     if end := request.GET.get("end"):
@@ -127,7 +129,7 @@ def events(request):
             "extendedProps": {
                 "status": a.get_status_display(),
                 "status_code": a.status,
-                "type": a.get_type_display(),
+                "type": a.protocol_label,
                 "owner": a.owner.full_name,
                 "phone": a.phone_snapshot or a.owner.phone,
                 "vet": a.assigned_vet.display_name if a.assigned_vet else "",

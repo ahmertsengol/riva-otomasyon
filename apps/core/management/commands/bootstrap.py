@@ -24,16 +24,50 @@ SPECIES = [
     "Sürüngen", "Koyun", "Keçi", "Tavşan", "Diğer",
 ]
 
-# (tür, ad, ilk doz yaşı, tekrar gün, hatırlatma gün, seri doz, seri aralık, açıklama)
+# (kategori, tür, ad, ilk doz yaşı, tekrar gün, hatırlatma gün, seri doz, seri aralık, açıklama)
+# TEK MOTOR: aşı + iç/dış parazit + ilaç kürü. Aralıklar/dozlar yaygın uygulamaya göre
+# DOLDURULMUŞ ÖRNEKLERDİR; bölgeye, ürüne ve güncel mevzuata göre değişir →
+# klinik veteriner hekimi DOĞRULAYIP düzenlemelidir (her alan UI'dan düzenlenebilir).
+_DISC = " (Düzenlenebilir örnek — veteriner aralığı/dozu doğrulamalı.)"
 VACCINE_SPECS = [
-    ("Kedi", "Karma", "8-9 haftalık", 365, 14, 2, 21,
-     "Örnek başlangıç protokolüdür; klinik tarafından doğrulanmalıdır."),
-    ("Kedi", "Kuduz", "12 haftalık", 365, 14, 1, None,
-     "Yasal zorunluluk ve güncel mevzuat klinik tarafından kontrol edilmelidir."),
-    ("Köpek", "Karma", "6-8 haftalık", 365, 14, 2, 21,
-     "Örnek başlangıç protokolüdür; klinik tarafından doğrulanmalıdır."),
-    ("Köpek", "Kuduz", "12 haftalık", 365, 14, 1, None,
-     "Yasal zorunluluk ve güncel mevzuat klinik tarafından kontrol edilmelidir."),
+    # ---- Köpek aşıları ----
+    ("vaccine", "Köpek", "Karma (DHPP)", "6-8 haftalık", 365, 14, 3, 21,
+     "Parvo, gençlik hastalığı (distemper), hepatit, parainfluenza. Yavru serisi + yıllık rapel." + _DISC),
+    ("vaccine", "Köpek", "Kuduz", "12 haftalık", 365, 14, 1, None,
+     "Yasal olarak gerekli olabilir; tek doz + yıllık rapel." + _DISC),
+    ("vaccine", "Köpek", "Bronşin (Kennel Cough)", "8 haftalık", 365, 14, 1, None,
+     "Bordetella/parainfluenza (kennel cough); genelde yıllık." + _DISC),
+    ("vaccine", "Köpek", "Leptospira", "8-9 haftalık", 365, 14, 2, 21,
+     "Leptospirosis; 2 dozluk seri + yıllık rapel (çoğu zaman karma içinde)." + _DISC),
+    # ---- Kedi aşıları ----
+    ("vaccine", "Kedi", "Karma (FVRCP)", "8-9 haftalık", 365, 14, 3, 21,
+     "Nezle (herpes/calici) + panlökopeni. Yavru serisi + yıllık rapel." + _DISC),
+    ("vaccine", "Kedi", "Kuduz", "12 haftalık", 365, 14, 1, None,
+     "Tek doz + yıllık rapel." + _DISC),
+    ("vaccine", "Kedi", "Lösemi (FeLV)", "8-9 haftalık", 365, 14, 2, 21,
+     "Feline lösemi virüsü; 2 dozluk seri + yıllık rapel." + _DISC),
+    # ---- İç parazit (solucan) — yavru sık, erişkin ~3 ayda bir ----
+    ("internal_parasite", "Köpek", "İç Parazit (Solucan)", "Yavru aylık, erişkin 3 ayda bir",
+     90, 7, 1, None, "Bağırsak solucanları; erişkinde genelde 3 ayda bir." + _DISC),
+    ("internal_parasite", "Kedi", "İç Parazit (Solucan)", "Yavru aylık, erişkin 3 ayda bir",
+     90, 7, 1, None, "Bağırsak solucanları; erişkinde genelde 3 ayda bir." + _DISC),
+    # ---- Kalp kurdu koruması (heartworm) — endemik bölgede aylık ----
+    ("internal_parasite", "Köpek", "Kalp Kurdu Koruması", "Aylık (endemik bölgede)",
+     30, 5, 1, None, "Heartworm koruması; endemik bölgelerde aylık." + _DISC),
+    # ---- Dış parazit (pire-kene) — ürüne göre genelde aylık ----
+    ("external_parasite", "Köpek", "Dış Parazit (Pire-Kene)", "Aylık",
+     30, 5, 1, None, "Pire-kene; ürüne göre genelde aylık (bazı ürünler 3 aylık)." + _DISC),
+    ("external_parasite", "Kedi", "Dış Parazit (Pire-Kene)", "Aylık",
+     30, 5, 1, None, "Pire-kene; ürüne göre genelde aylık (bazı ürünler 3 aylık)." + _DISC),
+    # ---- İlaç kürleri (örnek; ilaca/duruma göre klinik düzenler) ----
+    ("medication", "Köpek", "Antibiyotik Kürü (örnek)", "—", None, 1, 7, 1,
+     "Örnek: 7 gün boyunca günde 1 doz. İlaca göre doz/gün sayısını düzenleyin." + _DISC),
+    ("medication", "Kedi", "Antibiyotik Kürü (örnek)", "—", None, 1, 7, 1,
+     "Örnek: 7 gün boyunca günde 1 doz. İlaca göre doz/gün sayısını düzenleyin." + _DISC),
+    ("medication", "Köpek", "Ağrı Kesici / NSAID Kürü (örnek)", "—", None, 1, 3, 1,
+     "Örnek: 3 gün boyunca günde 1 doz." + _DISC),
+    ("medication", "Kedi", "Ağrı Kesici / NSAID Kürü (örnek)", "—", None, 1, 3, 1,
+     "Örnek: 3 gün boyunca günde 1 doz." + _DISC),
 ]
 
 SERVICE_SPECS = [
@@ -82,10 +116,10 @@ class Command(BaseCommand):
         # Türler
         species_map = {n: Species.objects.get_or_create(name=n)[0] for n in SPECIES}
 
-        # Aşı protokolleri
-        for sp_name, name, first, repeat, remind, doses, interval, desc in VACCINE_SPECS:
+        # Protokoller (aşı + iç/dış parazit + ilaç)
+        for category, sp_name, name, first, repeat, remind, doses, interval, desc in VACCINE_SPECS:
             VaccineDefinition.objects.get_or_create(
-                species=species_map[sp_name], name=name,
+                species=species_map[sp_name], name=name, category=category,
                 defaults={
                     "first_dose_age_text": first, "repeat_interval_days": repeat,
                     "reminder_offset_days": remind, "series_doses": doses,
@@ -116,6 +150,24 @@ class Command(BaseCommand):
             ("asi-geciken", "Aşı Gecikti", T.VACCINE, L.TR,
              "Sayın {{owner_name}}, {{pet_name}} için {{vaccine}} aşısı {{date}} tarihinde gecikti. "
              "En kısa sürede randevu almanızı öneririz. {{clinic}}"),
+            ("ic-parazit-yaklasan", "İç Parazit Yaklaşıyor", T.VACCINE, L.TR,
+             "Sayın {{owner_name}}, {{pet_name}} için iç parazit (solucan) uygulamasının zamanı "
+             "yaklaşıyor (son tarih {{date}}). Randevu için bizi arayabilirsiniz. {{clinic}}"),
+            ("ic-parazit-geciken", "İç Parazit Gecikti", T.VACCINE, L.TR,
+             "Sayın {{owner_name}}, {{pet_name}} için iç parazit uygulaması {{date}} tarihinde gecikti. "
+             "En kısa sürede randevu almanızı öneririz. {{clinic}}"),
+            ("dis-parazit-yaklasan", "Dış Parazit Yaklaşıyor", T.VACCINE, L.TR,
+             "Sayın {{owner_name}}, {{pet_name}} için dış parazit (pire-kene) uygulamasının zamanı "
+             "yaklaşıyor (son tarih {{date}}). Randevu için bizi arayabilirsiniz. {{clinic}}"),
+            ("dis-parazit-geciken", "Dış Parazit Gecikti", T.VACCINE, L.TR,
+             "Sayın {{owner_name}}, {{pet_name}} için dış parazit uygulaması {{date}} tarihinde gecikti. "
+             "En kısa sürede randevu almanızı öneririz. {{clinic}}"),
+            ("ilac-yaklasan", "İlaç Dozu Yaklaşıyor", T.VACCINE, L.TR,
+             "Sayın {{owner_name}}, {{pet_name}} için {{vaccine}} sonraki dozunun zamanı geldi ({{date}}). "
+             "{{clinic}}"),
+            ("ilac-geciken", "İlaç Dozu Gecikti", T.VACCINE, L.TR,
+             "Sayın {{owner_name}}, {{pet_name}} için {{vaccine}} dozu {{date}} tarihinde gecikti. "
+             "Lütfen aksatmayın. {{clinic}}"),
             ("kontrol-hatirlatma", "Kontrol Hatırlatma", T.CONTROL, L.TR,
              "Sayın {{owner_name}}, {{pet_name}} için kontrol zamanı geldi ({{date}}). "
              "Randevu için bizi arayabilirsiniz. {{clinic}}"),
@@ -136,10 +188,13 @@ class Command(BaseCommand):
                 key=key, defaults={"name": name, "type": ttype, "locale": locale, "body": body}
             )
 
+        # Not: VACCINE tipi kurallar TÜM koruyucu/tedavi kayıtlarını (aşı + parazit + ilaç)
+        # tarar; metin kategoriye göre otomatik seçilir.
         for rname, rtype, offset, tkey in [
             ("Randevudan 1 gün önce", T.APPOINTMENT, 1, "randevu-hatirlatma"),
-            ("Aşıdan 7 gün önce", T.VACCINE, 7, "asi-yaklasan"),
-            ("Aşı gecikmesi (1 gün sonra)", T.VACCINE, -1, "asi-geciken"),
+            ("Koruyucu: 7 gün önce", T.VACCINE, 7, "asi-yaklasan"),
+            ("Koruyucu: aynı gün", T.VACCINE, 0, "asi-yaklasan"),
+            ("Koruyucu: gecikme (1 gün sonra)", T.VACCINE, -1, "asi-geciken"),
         ]:
             ReminderRule.objects.get_or_create(
                 name=rname, type=rtype, offset_days=offset,
@@ -148,6 +203,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f"Bootstrap tamam: {Species.objects.count()} tür, "
-            f"{VaccineDefinition.objects.count()} aşı protokolü, "
+            f"{VaccineDefinition.objects.count()} protokol (aşı/parazit/ilaç), "
             f"{MessageTemplate.objects.count()} şablon, {ServiceItem.objects.count()} hizmet."
         ))

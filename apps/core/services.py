@@ -99,10 +99,54 @@ def dashboard_context() -> dict:
         "failed_messages": _safe(failed_messages),
         "todays_collection": _safe(todays_collection, 0),
     }
-    ctx["today_appointments"] = _safe(
-        lambda: list(appointments_today().select_related("patient", "owner", "assigned_vet").order_by("starts_at")),
-        [],
-    )
+    tomorrow = today + timedelta(days=1)
+    ctx["tomorrow"] = tomorrow
+
+    def appts_on(day):
+        from apps.appointments.models import Appointment
+
+        return list(
+            Appointment.objects.filter(starts_at__date=day)
+            .exclude(status=Appointment.Status.CANCELLED)
+            .select_related("patient", "owner", "assigned_vet", "protocol_definition")
+            .order_by("starts_at")
+        )
+
+    def due_protocols_on(day):
+        from apps.appointments.models import Appointment
+        from apps.vaccines.models import VaccineRecord
+
+        # O gün için zaten protokol randevusu olan (hayvan, protokol) çiftleri → due'da tekrar gösterme
+        booked = set(
+            Appointment.objects.filter(
+                starts_at__date=day, protocol_definition__isnull=False
+            )
+            .exclude(status=Appointment.Status.CANCELLED)
+            .values_list("patient_id", "protocol_definition_id")
+        )
+        records = (
+            VaccineRecord.objects.filter(next_due_at=day)
+            .select_related("patient", "patient__owner", "vaccine_definition")
+            .order_by("patient__name")
+        )
+        return [
+            r for r in records
+            if (r.patient_id, r.vaccine_definition_id) not in booked
+        ]
+
+    def pending_reminder_list():
+        from apps.reminders.models import OutboundMessage
+
+        return list(
+            OutboundMessage.objects.filter(status=OutboundMessage.PENDING)
+            .select_related("owner", "patient")[:50]
+        )
+
+    ctx["today_appointments"] = _safe(lambda: appts_on(today), [])
+    ctx["tomorrow_appointments"] = _safe(lambda: appts_on(tomorrow), [])
+    ctx["due_today"] = _safe(lambda: due_protocols_on(today), [])
+    ctx["due_tomorrow"] = _safe(lambda: due_protocols_on(tomorrow), [])
+    ctx["pending_reminders"] = _safe(pending_reminder_list, [])
     return ctx
 
 

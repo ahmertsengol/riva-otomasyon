@@ -72,6 +72,7 @@
   {% if m.status == 'pending' %}
   <div class="flex items-center gap-2 text-sm">
     <span class="text-slate-500 flex-1 truncate">#{{ m.pk }} · {{ m.owner.full_name }}</span>
+    {% if m.patient_id %}<form method="post" action="{% url 'reminders:create_appointment' m.pk %}">{% csrf_token %}<button class="btn btn-secondary btn-sm">{% include "partials/_icon.html" with name="calendar" %}Randevu Oluştur</button></form>{% endif %}
     <form method="post" action="{% url 'reminders:mark_sent' m.pk %}">{% csrf_token %}<button class="btn btn-secondary btn-sm">Gönderildi</button></form>
     <form method="post" action="{% url 'reminders:cancel' m.pk %}">{% csrf_token %}<button class="btn btn-ghost btn-sm text-red-600">İptal</button></form>
   </div>
