@@ -8,7 +8,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from apps.accounts.models import User
 from apps.core.models import ClinicSettings
@@ -50,6 +50,9 @@ class VaccineRecordCreateView(LoginRequiredMixin, CreateView):
         ctx["init_definitions"] = defs
         ctx["init_def_selected"] = self.request.GET.get("definition", "")
         return ctx
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
 
     def form_valid(self, form):
         if not form.instance.vet_id and self.request.user.is_authenticated:
@@ -107,6 +110,35 @@ class VaccineRecordCreateView(LoginRequiredMixin, CreateView):
         )
 
 
+class VaccineRecordUpdateView(LoginRequiredMixin, UpdateView):
+    model = VaccineRecord
+    form_class = VaccineRecordForm
+    template_name = "vaccines/record_form.html"
+
+    def get_queryset(self):
+        return VaccineRecord.objects.select_related("patient", "patient__species", "vaccine_definition")
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        defs = VaccineDefinition.objects.filter(active=True).select_related("species")
+        if self.object.patient_id:
+            defs = defs.filter(species_id=self.object.patient.species_id)
+        ctx["init_definitions"] = defs
+        ctx["init_def_selected"] = str(self.object.vaccine_definition_id or "")
+        ctx["page_title"] = "Uygulama Kaydını Düzenle"
+        ctx["cancel_url"] = self.object.get_absolute_url()
+        ctx["submit_label"] = "Güncelle"
+        ctx["is_update"] = True
+        return ctx
+
+    def form_valid(self, form):
+        messages.success(self.request, "Aşı/uygulama kaydı güncellendi.")
+        return super().form_valid(form)
+
+
 class VaccineRecordDetailView(LoginRequiredMixin, DetailView):
     model = VaccineRecord
     template_name = "vaccines/record_detail.html"
@@ -116,6 +148,24 @@ class VaccineRecordDetailView(LoginRequiredMixin, DetailView):
         return VaccineRecord.objects.select_related(
             "patient", "patient__owner", "patient__species", "vaccine_definition", "vet"
         )
+
+
+class VaccineRecordDeleteView(LoginRequiredMixin, DeleteView):
+    model = VaccineRecord
+    template_name = "vaccines/record_confirm_delete.html"
+    context_object_name = "record"
+
+    def get_queryset(self):
+        return VaccineRecord.objects.select_related(
+            "patient", "patient__owner", "patient__species", "vaccine_definition"
+        )
+
+    def get_success_url(self):
+        return self.object.patient.get_absolute_url()
+
+    def form_valid(self, form):
+        messages.success(self.request, "Aşı/uygulama kaydı silindi.")
+        return super().form_valid(form)
 
 
 class UpcomingVaccineListView(LoginRequiredMixin, ListView):

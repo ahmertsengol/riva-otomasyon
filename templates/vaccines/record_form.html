@@ -4,8 +4,8 @@
 {% block content %}
 <div class="max-w-3xl mx-auto">
   <div class="flex items-center gap-2 mb-5">
-    <a href="{% if form.initial.patient %}{% url 'patients:detail' form.initial.patient %}{% else %}{% url 'vaccines:upcoming' %}{% endif %}" class="btn btn-ghost px-2">‹</a>
-    <h1 class="page-title">Protokol Uygula</h1>
+    <a href="{% if cancel_url %}{{ cancel_url }}{% elif form.initial.patient %}{% url 'patients:detail' form.initial.patient %}{% else %}{% url 'vaccines:upcoming' %}{% endif %}" class="btn btn-ghost px-2">‹</a>
+    <h1 class="page-title">{{ page_title|default:"Protokol Uygula" }}</h1>
   </div>
 
   <form method="post" class="card card-pad space-y-4">
@@ -29,13 +29,15 @@
       {% include "partials/_field.html" with field=form.expiry_date %}
     </div>
     {% include "partials/_field.html" with field=form.note %}
+    {% if not is_update %}
     <div class="rounded-lg bg-brand-50/60 border border-brand-100 px-3 py-2">
       {% include "partials/_field.html" with field=form.create_followup %}
       <p class="help -mt-1">Açıksa, "Sonraki tarih" için tür protokolüne göre <strong>planlı randevu</strong> oluşturulur (Karma 1 → Karma 2 gibi). Randevuyu sonra onaylar/iptal edebilirsiniz.</p>
     </div>
+    {% endif %}
     <div class="flex gap-2 justify-end border-t border-slate-100 pt-4">
-      <a href="{% url 'vaccines:upcoming' %}" class="btn btn-secondary">İptal</a>
-      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="{% if cancel_url %}{{ cancel_url }}{% else %}{% url 'vaccines:upcoming' %}{% endif %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">{{ submit_label|default:"Kaydet" }}</button>
     </div>
   </form>
 </div>

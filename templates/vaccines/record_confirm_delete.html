@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Uygulama Kaydı Sil · {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto card card-pad">
+  <h1 class="text-lg font-semibold text-slate-900 mb-2">Uygulama kaydını sil</h1>
+  <p class="text-sm text-slate-600 mb-4">
+    <strong>{{ record.display_name }}</strong> · {{ record.patient.name }} için
+    {{ record.applied_at|date:"d.m.Y" }} tarihli kayıt silinecek.
+    Bu işlem geri alınamaz.
+  </p>
+  <form method="post" class="flex justify-end gap-2">
+    {% csrf_token %}
+    <a href="{% url 'vaccines:record_detail' record.pk %}" class="btn btn-secondary">Vazgeç</a>
+    <button type="submit" class="btn btn-danger">Evet, Sil</button>
+  </form>
+</div>
+{% endblock %}

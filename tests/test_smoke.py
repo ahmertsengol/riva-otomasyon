@@ -429,6 +429,61 @@ def test_vaccine_protocol_record_and_due_lists(auth_client, admin_user, db):
     assert patient_detail.status_code == 200
     assert "Aşılar" in body
     assert "Smoke test aşı kaydı" in body
+    assert reverse("vaccines:record_update", args=[record.pk]) in body
+    assert reverse("vaccines:record_delete", args=[record.pk]) in body
+
+
+def test_vaccine_record_update_and_delete(auth_client, admin_user, db):
+    owner = Owner.objects.create(first_name="Aşı", last_name="Düzelt", phone="0512")
+    species = Species.objects.create(name="Kedi")
+    patient = Patient.objects.create(owner=owner, name="Leo", species=species)
+    record = VaccineRecord.objects.create(
+        patient=patient,
+        vaccine_name="Yanlış Aşı",
+        applied_at=timezone.localdate(),
+        next_due_at=timezone.localdate() + timedelta(days=30),
+        vet=admin_user,
+        note="İlk kayıt",
+    )
+
+    detail = auth_client.get(reverse("vaccines:record_detail", args=[record.pk]))
+    detail_body = detail.content.decode()
+    assert detail.status_code == 200
+    assert reverse("vaccines:record_update", args=[record.pk]) in detail_body
+    assert reverse("vaccines:record_delete", args=[record.pk]) in detail_body
+
+    edit_page = auth_client.get(reverse("vaccines:record_update", args=[record.pk]))
+    assert edit_page.status_code == 200
+    assert "Uygulama Kaydını Düzenle" in edit_page.content.decode()
+
+    update_resp = auth_client.post(
+        reverse("vaccines:record_update", args=[record.pk]),
+        {
+            "patient": patient.pk,
+            "vaccine_definition": "",
+            "vaccine_name": "Düzeltilmiş Aşı",
+            "applied_at": timezone.localdate().isoformat(),
+            "next_due_at": (timezone.localdate() + timedelta(days=45)).isoformat(),
+            "vet": admin_user.pk,
+            "serial_lot": "FIX-1",
+            "expiry_date": "",
+            "note": "Düzeltildi",
+        },
+    )
+    assert update_resp.status_code == 302
+    record.refresh_from_db()
+    assert record.vaccine_name == "Düzeltilmiş Aşı"
+    assert record.note == "Düzeltildi"
+
+    confirm = auth_client.get(reverse("vaccines:record_delete", args=[record.pk]))
+    confirm_body = confirm.content.decode()
+    assert confirm.status_code == 200
+    assert "Uygulama kaydını sil" in confirm_body
+    assert reverse("vaccines:record_detail", args=[record.pk]) in confirm_body
+
+    delete_resp = auth_client.post(reverse("vaccines:record_delete", args=[record.pk]))
+    assert delete_resp.status_code == 302
+    assert not VaccineRecord.objects.filter(pk=record.pk).exists()
 
 
 def test_vaccine_certificate_and_history_pdf(auth_client, admin_user, db):

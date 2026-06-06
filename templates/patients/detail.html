@@ -237,19 +237,23 @@
       {% if vaccine_records %}
       <div class="divide-y divide-slate-50">
         {% for record in vaccine_records %}
-        <a href="{% url 'vaccines:record_detail' record.pk %}" class="block px-4 py-3 hover:bg-brand-50/40">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div class="font-medium text-slate-900">{{ record.display_name }}</div>
+        <div class="px-4 py-3 hover:bg-brand-50/40">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="min-w-[14rem]">
+              <a href="{% url 'vaccines:record_detail' record.pk %}" class="font-medium text-slate-900 hover:text-brand-700 hover:underline">{{ record.display_name }}</a>
               <div class="text-xs text-slate-500">
                 Uygulama: {{ record.applied_at|date:"d F Y" }}
                 {% if record.vet %} · {{ record.vet.display_name }}{% endif %}
               </div>
             </div>
-            {% if record.is_overdue %}<span class="badge badge-danger">Gecikti: {{ record.next_due_at|date:"d.m.Y" }}</span>{% elif record.next_due_at %}<span class="badge badge-warning">Sonraki: {{ record.next_due_at|date:"d.m.Y" }}</span>{% else %}<span class="badge badge-success">Tamamlandı</span>{% endif %}
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              {% if record.is_overdue %}<span class="badge badge-danger">Gecikti: {{ record.next_due_at|date:"d.m.Y" }}</span>{% elif record.next_due_at %}<span class="badge badge-warning">Sonraki: {{ record.next_due_at|date:"d.m.Y" }}</span>{% else %}<span class="badge badge-success">Tamamlandı</span>{% endif %}
+              <a href="{% url 'vaccines:record_update' record.pk %}" class="btn btn-secondary btn-sm">Düzenle</a>
+              <a href="{% url 'vaccines:record_delete' record.pk %}" class="btn btn-ghost btn-sm text-red-600">Sil</a>
+            </div>
           </div>
           {% if record.note %}<p class="text-xs text-slate-500 mt-2 line-clamp-2">{{ record.note }}</p>{% endif %}
-        </a>
+        </div>
         {% endfor %}
       </div>
       {% else %}
