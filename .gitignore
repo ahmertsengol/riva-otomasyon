@@ -25,3 +25,6 @@ db.sqlite3
 # sadece ~100MB'lık standalone CLI binary'si hariç tutulur.
 /tailwindcss
 klinik-docker-compose.txt
+
+CLAUDE.md
+AGENTS.md
